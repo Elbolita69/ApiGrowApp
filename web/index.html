@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invernadero Inteligente - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2d6a4f;
+            --primary-light: #40916c;
+            --primary-dark: #1b4332;
+            --secondary: #95d5b2;
+            --accent: #d8f3dc;
+            --danger: #e63946;
+            --warning: #f4a261;
+            --success: #2a9d8f;
+            --bg: #f8faf9;
+            --card-bg: #ffffff;
+            --text: #1b1b1b;
+            --text-light: #6c757d;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        header p {
+            opacity: 0.9;
+            margin-top: 0.25rem;
+            font-size: 0.95rem;
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--card-bg);
+            border-bottom: 1px solid #e9ecef;
+            padding: 0 2rem;
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        nav button {
+            padding: 1rem 1.25rem;
+            border: none;
+            background: transparent;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        nav button:hover {
+            color: var(--primary);
+            background: var(--accent);
+        }
+
+        nav button.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Main Content */
+        main {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-header h2 {
+            font-size: 1.2rem;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 1.25rem;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .stat-card h3 {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-card.temperature { background: linear-gradient(135deg, #e63946 0%, #f4a261 100%); }
+        .stat-card.humidity { background: linear-gradient(135deg, #2a9d8f 0%, #40916c 100%); }
+        .stat-card.light { background: linear-gradient(135deg, #f4a261 0%, #e9c46a 100%); }
+        .stat-card.ph { background: linear-gradient(135deg, #9b59b6 0%, #3498db 100%); }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.875rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: var(--bg);
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: var(--accent);
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.35rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: #d8f3dc; color: #2d6a4f; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+
+        /* Buttons */
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            color: var(--primary-dark);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        /* Section visibility */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* API Status */
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .api-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #dc3545;
+        }
+
+        .api-status.connected .dot {
+            background: #28a745;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            nav {
+                padding: 0 1rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Invernadero Inteligente
+        </h1>
+        <p>Sistema de gestión y monitoreo en tiempo real</p>
+    </header>
+
+    <nav>
+        <button class="active" data-section="dashboard">Dashboard</button>
+        <button data-section="greenhouses">Invernaderos</button>
+        <button data-section="sensors">Sensores</button>
+        <button data-section="readings">Lecturas</button>
+        <button data-section="crops">Cultivos</button>
+        <button data-section="batches">Lotes</button>
+        <button data-section="alerts">Alertas</button>
+        <button data-section="irrigation">Riego</button>
+        <button data-section="actuators">Actuadores</button>
+        <button data-section="settings">Configuración</button>
+        <button data-section="users">Usuarios</button>
+    </nav>
+
+    <main>
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Total Invernaderos</h3>
+                    <div class="value" id="stat-greenhouses">-</div>
+                </div>
+                <div class="stat-card temperature">
+                    <h3>Temp. Promedio</h3>
+                    <div class="value" id="stat-temp">-°C</div>
+                </div>
+                <div class="stat-card humidity">
+                    <h3>Humedad Promedio</h3>
+                    <div class="value" id="stat-humidity">-%</div>
+                </div>
+                <div class="stat-card light">
+                    <h3>Alertas Activas</h3>
+                    <div class="value" id="stat-alerts">-</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Últimas Lecturas de Sensores</h2>
+                </div>
+                <div id="latest-readings">
+                    <div class="loading">Cargando lecturas</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Alertas Activas</h2>
+                </div>
+                <div id="active-alerts">
+                    <div class="loading">Cargando alertas</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Greenhouses Section -->
+        <section id="greenhouses" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Invernaderos</h2>
+                    <button class="btn btn-primary" onclick="openModal('greenhouse-modal')">+ Nuevo Invernadero</button>
+                </div>
+                <div id="greenhouses-list">
+                    <div class="loading">Cargando invernaderos</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sensors Section -->
+        <section id="sensors" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Sensores</h2>
+                    <button class="btn btn-primary" onclick="openModal('sensor-modal')">+ Nuevo Sensor</button>
+                </div>
+                <div id="sensors-list">
+                    <div class="loading">Cargando sensores</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Readings Section -->
+        <section id="readings" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Historial de Lecturas</h2>
+                </div>
+                <div id="readings-list">
+                    <div class="loading">Cargando lecturas</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Crops Section -->
+        <section id="crops" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Catálogo de Cultivos</h2>
+                    <button class="btn btn-primary" onclick="openModal('crop-modal')">+ Nuevo Cultivo</button>
+                </div>
+                <div id="crops-list">
+                    <div class="loading">Cargando cultivos</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Batches Section -->
+        <section id="batches" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Lotes de Cultivos</h2>
+                    <button class="btn btn-primary" onclick="openModal('batch-modal')">+ Nuevo Lote</button>
+                </div>
+                <div id="batches-list">
+                    <div class="loading">Cargando lotes</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alerts Section -->
+        <section id="alerts" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Alertas</h2>
+                </div>
+                <div id="alerts-list">
+                    <div class="loading">Cargando alertas</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Irrigation Section -->
+        <section id="irrigation" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Zonas de Riego</h2>
+                    <button class="btn btn-primary" onclick="openModal('zone-modal')">+ Nueva Zona</button>
+                </div>
+                <div id="zones-list">
+                    <div class="loading">Cargando zonas</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Historial de Riego</h2>
+                </div>
+                <div id="irrigation-logs">
+                    <div class="loading">Cargando historial</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Actuators Section -->
+        <section id="actuators" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Actuadores</h2>
+                    <button class="btn btn-primary" onclick="openModal('actuator-modal')">+ Nuevo Actuador</button>
+                </div>
+                <div id="actuators-list">
+                    <div class="loading">Cargando actuadores</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2>Control de Actuadores</h2>
+                </div>
+                <div id="actuator-controls">
+                    <div class="loading">Cargando controles</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settings" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Configuración de Invernaderos</h2>
+                </div>
+                <div id="settings-list">
+                    <div class="loading">Cargando configuraciones</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Section -->
+        <section id="users" class="section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Usuarios</h2>
+                    <button class="btn btn-primary" onclick="openModal('user-modal')">+ Nuevo Usuario</button>
+                </div>
+                <div id="users-list">
+                    <div class="loading">Cargando usuarios</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="greenhouse-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nuevo Invernadero</h3>
+                <button class="modal-close" onclick="closeModal('greenhouse-modal')">&times;</button>
+            </div>
+            <form id="greenhouse-form">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Ubicación</label>
+                    <input type="text" name="ubicacion">
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Área (m²)</label>
+                        <input type="number" name="area_metros_cuadrados" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Capacidad Máxima</label>
+                        <input type="number" name="capacidad_maxima">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">Crear Invernadero</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="sensor-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nuevo Sensor</h3>
+                <button class="modal-close" onclick="closeModal('sensor-modal')">&times;</button>
+            </div>
+            <form id="sensor-form">
+                <div class="form-group">
+                    <label>ID Invernadero</label>
+                    <input type="number" name="greenhouse_id" required>
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select name="tipo" required>
+                        <option value="temperatura">Temperatura</option>
+                        <option value="humedad">Humedad</option>
+                        <option value="luz">Luz</option>
+                        <option value="ph">pH</option>
+                        <option value="co2">CO2</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Unidad</label>
+                    <input type="text" name="unidad" required placeholder="°C, %, lux, pH, ppm">
+                </div>
+                <div class="form-group">
+                    <label>Ubicación</label>
+                    <input type="text" name="ubicacion">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">Crear Sensor</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="crop-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nuevo Cultivo</h3>
+                <button class="modal-close" onclick="closeModal('crop-modal')">&times;</button>
+            </div>
+            <form id="crop-form">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Nombre Científico</label>
+                    <input type="text" name="nombre_cientifico">
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Temp. Mín (°C)</label>
+                        <input type="number" name="temperatura_min" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Temp. Máx (°C)</label>
+                        <input type="number" name="temperatura_max" step="0.01">
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Humedad Mín (%)</label>
+                        <input type="number" name="humedad_min" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Humedad Máx (%)</label>
+                        <input type="number" name="humedad_max" step="0.01">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Ciclo (días)</label>
+                    <input type="number" name="ciclo_dias">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">Crear Cultivo</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="zone-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Nueva Zona de Riego</h3>
+                <button class="modal-close" onclick="closeModal('zone-modal')">&times;</button>
+            </div>
+            <form id="zone-form">
+                <div class="form-group">
+                    <label>ID Invernadero</label>
+                    <input type="number" name="greenhouse_id" required>
+                </div>
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select name="tipo">
+                        <option value="gotas">Goteo</option>
+                        <option value="aspersion">Aspersión</option>
+                        <option value="inundacion">Inundación</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%">Crear Zona</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:8000';
+
+        // Navigation
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.section).classList.add('active');
+                loadSection(btn.dataset.section);
+            });
+        });
+
+        // Modal functions
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // Close modal on outside click
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            });
+        });
+
+        // API helpers
+        async function apiGet(endpoint) {
+            const res = await fetch(`${API_BASE}${endpoint}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function apiPost(endpoint, data) {
+            const res = await fetch(`${API_BASE}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        async function apiDelete(endpoint) {
+            const res = await fetch(`${API_BASE}${endpoint}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        }
+
+        // Load sections
+        async function loadSection(section) {
+            switch(section) {
+                case 'dashboard': loadDashboard(); break;
+                case 'greenhouses': loadGreenhouses(); break;
+                case 'sensors': loadSensors(); break;
+                case 'readings': loadReadings(); break;
+                case 'crops': loadCrops(); break;
+                case 'batches': loadBatches(); break;
+                case 'alerts': loadAlerts(); break;
+                case 'irrigation': loadIrrigation(); break;
+                case 'actuators': loadActuators(); break;
+                case 'settings': loadSettings(); break;
+                case 'users': loadUsers(); break;
+            }
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            try {
+                const [ghouses, alerts, readings] = await Promise.all([
+                    apiGet('/greenhouses/'),
+                    apiGet('/alerts/activas'),
+                    apiGet('/sensor-readings/')
+                ]);
+
+                document.getElementById('stat-greenhouses').textContent = ghouses.length || 0;
+                document.getElementById('stat-alerts').textContent = alerts.length || 0;
+
+                // Calculate averages from latest readings
+                const temps = readings.filter(r => r.tipo === 'temperatura').slice(0, 10);
+                const humids = readings.filter(r => r.tipo === 'humedad').slice(0, 10);
+
+                if (temps.length) {
+                    const avg = (temps.reduce((s, r) => s + parseFloat(r.valor), 0) / temps.length).toFixed(1);
+                    document.getElementById('stat-temp').textContent = avg + '°C';
+                }
+                if (humids.length) {
+                    const avg = (humids.reduce((s, r) => s + parseFloat(r.valor), 0) / humids.length).toFixed(1);
+                    document.getElementById('stat-humidity').textContent = avg + '%';
+                }
+
+                // Latest readings table
+                const readingsHtml = readings.slice(0, 10).length ? `
+                    <table>
+                        <thead><tr><th>Sensor</th><th>Tipo</th><th>Valor</th><th>Timestamp</th></tr></thead>
+                        <tbody>
+                            ${readings.slice(0, 10).map(r => `
+                                <tr>
+                                    <td>${r.sensor_nombre || r.sensor_id}</td>
+                                    <td><span class="badge badge-info">${r.tipo}</span></td>
+                                    <td><strong>${r.valor} ${r.unidad || ''}</strong></td>
+                                    <td>${new Date(r.timestamp).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay lecturas registradas</div>';
+                document.getElementById('latest-readings').innerHTML = readingsHtml;
+
+                // Active alerts
+                const alertsHtml = alerts.length ? `
+                    <table>
+                        <thead><tr><th>Tipo</th><th>Mensaje</th><th>Prioridad</th><th>Timestamp</th><th>Acción</th></tr></thead>
+                        <tbody>
+                            ${alerts.map(a => `
+                                <tr>
+                                    <td>${a.tipo}</td>
+                                    <td>${a.mensaje}</td>
+                                    <td><span class="badge ${a.prioridad === 'critica' ? 'badge-danger' : a.prioridad === 'alta' ? 'badge-warning' : 'badge-info'}">${a.prioridad}</span></td>
+                                    <td>${new Date(a.timestamp).toLocaleString()}</td>
+                                    <td><button class="btn btn-sm btn-primary" onclick="resolveAlert(${a.id})">Resolver</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay alertas activas</div>';
+                document.getElementById('active-alerts').innerHTML = alertsHtml;
+
+            } catch (e) {
+                console.error('Dashboard error:', e);
+            }
+        }
+
+        // Greenhouses
+        async function loadGreenhouses() {
+            try {
+                const data = await apiGet('/greenhouses/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Ubicación</th><th>Área (m²)</th><th>Capacidad</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            ${data.map(g => `
+                                <tr>
+                                    <td>${g.id}</td>
+                                    <td><strong>${g.nombre}</strong></td>
+                                    <td>${g.ubicacion || '-'}</td>
+                                    <td>${g.area_metros_cuadrados || '-'}</td>
+                                    <td>${g.capacidad_maxima || '-'}</td>
+                                    <td><span class="badge badge-success">${g.estado}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay invernaderos registrados</div>';
+                document.getElementById('greenhouses-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('greenhouses-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Sensors
+        async function loadSensors() {
+            try {
+                const data = await apiGet('/sensors/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Ubicación</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            ${data.map(s => `
+                                <tr>
+                                    <td>${s.id}</td>
+                                    <td><strong>${s.nombre}</strong></td>
+                                    <td><span class="badge badge-info">${s.tipo}</span></td>
+                                    <td>${s.unidad}</td>
+                                    <td>${s.ubicacion || '-'}</td>
+                                    <td><span class="badge badge-success">${s.estado}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay sensores registrados</div>';
+                document.getElementById('sensors-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('sensors-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Readings
+        async function loadReadings() {
+            try {
+                const data = await apiGet('/sensor-readings/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Sensor</th><th>Tipo</th><th>Valor</th><th>Timestamp</th></tr></thead>
+                        <tbody>
+                            ${data.map(r => `
+                                <tr>
+                                    <td>${r.id}</td>
+                                    <td>${r.sensor_nombre || r.sensor_id}</td>
+                                    <td><span class="badge badge-info">${r.tipo}</span></td>
+                                    <td><strong>${r.valor} ${r.unidad || ''}</strong></td>
+                                    <td>${new Date(r.timestamp).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay lecturas registradas</div>';
+                document.getElementById('readings-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('readings-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Crops
+        async function loadCrops() {
+            try {
+                const data = await apiGet('/crops/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Nombre Científico</th><th>Temp.</th><th>Humedad</th><th>Ciclo</th></tr></thead>
+                        <tbody>
+                            ${data.map(c => `
+                                <tr>
+                                    <td>${c.id}</td>
+                                    <td><strong>${c.nombre}</strong></td>
+                                    <td><em>${c.nombre_cientifico || '-'}</em></td>
+                                    <td>${c.temperatura_min || '-'} - ${c.temperatura_max || '-'} °C</td>
+                                    <td>${c.humedad_min || '-'} - ${c.humedad_max || '-'} %</td>
+                                    <td>${c.ciclo_dias || '-'} días</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay cultivos registrados</div>';
+                document.getElementById('crops-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('crops-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Batches
+        async function loadBatches() {
+            try {
+                const data = await apiGet('/crop-batches/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Cultivo</th><th>Fecha Siembra</th><th>Cosecha Est.</th><th>Plantas</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            ${data.map(b => `
+                                <tr>
+                                    <td>${b.id}</td>
+                                    <td>${b.cultivo_nombre || b.crop_id}</td>
+                                    <td>${b.fecha_siembra}</td>
+                                    <td>${b.fecha_cosecha_estimada || '-'}</td>
+                                    <td>${b.cantidad_plantas || '-'}</td>
+                                    <td><span class="badge badge-success">${b.estado}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay lotes registrados</div>';
+                document.getElementById('batches-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('batches-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Alerts
+        async function loadAlerts() {
+            try {
+                const data = await apiGet('/alerts/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Tipo</th><th>Mensaje</th><th>Prioridad</th><th>Estado</th><th>Timestamp</th></tr></thead>
+                        <tbody>
+                            ${data.map(a => `
+                                <tr>
+                                    <td>${a.id}</td>
+                                    <td>${a.tipo}</td>
+                                    <td>${a.mensaje}</td>
+                                    <td><span class="badge ${a.prioridad === 'critica' ? 'badge-danger' : a.prioridad === 'alta' ? 'badge-warning' : 'badge-info'}">${a.prioridad}</span></td>
+                                    <td><span class="badge ${a.estado === 'activa' ? 'badge-danger' : 'badge-success'}">${a.estado}</span></td>
+                                    <td>${new Date(a.timestamp).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay alertas registradas</div>';
+                document.getElementById('alerts-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('alerts-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Irrigation
+        async function loadIrrigation() {
+            try {
+                const [zones, logs] = await Promise.all([
+                    apiGet('/irrigation-zones/'),
+                    apiGet('/irrigation-logs/')
+                ]);
+
+                const zonesHtml = zones.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Invernadero</th><th>Tipo</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            ${zones.map(z => `
+                                <tr>
+                                    <td>${z.id}</td>
+                                    <td><strong>${z.nombre}</strong></td>
+                                    <td>${z.greenhouse_nombre || z.greenhouse_id}</td>
+                                    <td>${z.tipo}</td>
+                                    <td><span class="badge badge-success">${z.estado}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay zonas de riego</div>';
+                document.getElementById('zones-list').innerHTML = zonesHtml;
+
+                const logsHtml = logs.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Zona</th><th>Duración</th><th>Agua (L)</th><th>Modo</th><th>Resultado</th><th>Timestamp</th></tr></thead>
+                        <tbody>
+                            ${logs.map(l => `
+                                <tr>
+                                    <td>${l.id}</td>
+                                    <td>${l.zone_nombre || l.zone_id}</td>
+                                    <td>${l.duracion_minutos} min</td>
+                                    <td>${l.cantidad_agua_litros || '-'}</td>
+                                    <td>${l.modo}</td>
+                                    <td><span class="badge ${l.resultado === 'exitoso' ? 'badge-success' : 'badge-danger'}">${l.resultado}</span></td>
+                                    <td>${new Date(l.timestamp).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay historial de riego</div>';
+                document.getElementById('irrigation-logs').innerHTML = logsHtml;
+            } catch (e) {
+                console.error('Irrigation error:', e);
+            }
+        }
+
+        // Actuators
+        async function loadActuators() {
+            try {
+                const [actuators, controls] = await Promise.all([
+                    apiGet('/actuators/'),
+                    apiGet('/actuator-controls/')
+                ]);
+
+                const actuatorsHtml = actuators.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Ubicación</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            ${actuators.map(a => `
+                                <tr>
+                                    <td>${a.id}</td>
+                                    <td><strong>${a.nombre}</strong></td>
+                                    <td><span class="badge badge-info">${a.tipo}</span></td>
+                                    <td>${a.ubicacion || '-'}</td>
+                                    <td><span class="badge ${a.estado === 'activo' ? 'badge-success' : 'badge-warning'}">${a.estado}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay actuadores registrados</div>';
+                document.getElementById('actuators-list').innerHTML = actuatorsHtml;
+
+                const controlsHtml = controls.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Actuador</th><th>Acción</th><th>Valor</th><th>Resultado</th><th>Timestamp</th></tr></thead>
+                        <tbody>
+                            ${controls.map(c => `
+                                <tr>
+                                    <td>${c.id}</td>
+                                    <td>${c.actuator_nombre || c.actuator_id}</td>
+                                    <td>${c.accion}</td>
+                                    <td>${c.valor_ajuste || '-'}</td>
+                                    <td><span class="badge ${c.resultado === 'exitoso' ? 'badge-success' : 'badge-danger'}">${c.resultado}</span></td>
+                                    <td>${new Date(c.timestamp).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay controles registrados</div>';
+                document.getElementById('actuator-controls').innerHTML = controlsHtml;
+            } catch (e) {
+                console.error('Actuators error:', e);
+            }
+        }
+
+        // Settings
+        async function loadSettings() {
+            try {
+                const data = await apiGet('/greenhouse-settings/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Invernadero</th><th>Temp.</th><th>Humedad</th><th>pH</th><th>Intervalo</th></tr></thead>
+                        <tbody>
+                            ${data.map(s => `
+                                <tr>
+                                    <td>${s.id}</td>
+                                    <td><strong>${s.greenhouse_nombre || s.greenhouse_id}</strong></td>
+                                    <td>${s.temp_min} - ${s.temp_max} °C</td>
+                                    <td>${s.humedad_min} - ${s.humedad_max} %</td>
+                                    <td>${s.ph_min} - ${s.ph_max}</td>
+                                    <td>${s.intervalo_lectura_minutos} min</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay configuraciones</div>';
+                document.getElementById('settings-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('settings-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Users
+        async function loadUsers() {
+            try {
+                const data = await apiGet('/users/');
+                const html = data.length ? `
+                    <table>
+                        <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Nombre</th><th>Rol</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            ${data.map(u => `
+                                <tr>
+                                    <td>${u.id}</td>
+                                    <td><strong>${u.username}</strong></td>
+                                    <td>${u.email}</td>
+                                    <td>${u.nombre || '-'}</td>
+                                    <td><span class="badge badge-info">${u.rol}</span></td>
+                                    <td><span class="badge badge-success">${u.estado}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<div class="empty-state">No hay usuarios registrados</div>';
+                document.getElementById('users-list').innerHTML = html;
+            } catch (e) {
+                document.getElementById('users-list').innerHTML = '<div class="empty-state">Error al cargar datos</div>';
+            }
+        }
+
+        // Alert resolution
+        async function resolveAlert(id) {
+            try {
+                await fetch(`${API_BASE}/alerts/${id}/resolver`, { method: 'PATCH' });
+                loadDashboard();
+            } catch (e) {
+                alert('Error al resolver alerta');
+            }
+        }
+
+        // Helper to clean form data - remove empty strings and convert numbers
+        function cleanFormData(formData) {
+            const obj = {};
+            for (const [key, value] of formData.entries()) {
+                if (value === '') {
+                    obj[key] = null; // Send null instead of empty string
+                } else if (!isNaN(value) && value !== '') {
+                    obj[key] = parseFloat(value); // Convert to number
+                } else {
+                    obj[key] = value;
+                }
+            }
+            return obj;
+        }
+
+        // Form handlers
+        document.getElementById('greenhouse-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = cleanFormData(new FormData(e.target));
+            try {
+                await apiPost('/greenhouses/', data);
+                closeModal('greenhouse-modal');
+                loadGreenhouses();
+                e.target.reset();
+            } catch (err) {
+                alert('Error al crear invernadero: ' + err.message);
+            }
+        });
+
+        document.getElementById('sensor-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = cleanFormData(new FormData(e.target));
+            try {
+                await apiPost('/sensors/', data);
+                closeModal('sensor-modal');
+                loadSensors();
+                e.target.reset();
+            } catch (err) {
+                alert('Error al crear sensor: ' + err.message);
+            }
+        });
+
+        document.getElementById('crop-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = cleanFormData(new FormData(e.target));
+            try {
+                await apiPost('/crops/', data);
+                closeModal('crop-modal');
+                loadCrops();
+                e.target.reset();
+            } catch (err) {
+                alert('Error al crear cultivo: ' + err.message);
+            }
+        });
+
+        document.getElementById('zone-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = cleanFormData(new FormData(e.target));
+            try {
+                await apiPost('/irrigation-zones/', data);
+                closeModal('zone-modal');
+                loadIrrigation();
+                e.target.reset();
+            } catch (err) {
+                alert('Error al crear zona: ' + err.message);
+            }
+        });
+
+        // Initial load
+        loadDashboard();
+    </script>
+</body>
+</html>
