@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS moduloxrol (
     id SERIAL PRIMARY KEY,
     rol_id INTEGER NOT NULL REFERENCES rol(id) ON DELETE CASCADE,
     modulo_id INTEGER NOT NULL REFERENCES modulo(id) ON DELETE CASCADE,
+    puede_ver BOOLEAN DEFAULT FALSE,
+    puede_crear BOOLEAN DEFAULT FALSE,
+    puede_editar BOOLEAN DEFAULT FALSE,
+    puede_eliminar BOOLEAN DEFAULT FALSE,
     estado BOOLEAN DEFAULT TRUE,
     creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -193,7 +197,7 @@ CREATE TABLE IF NOT EXISTS actuators (
 CREATE TABLE IF NOT EXISTS actuator_controls (
     id SERIAL PRIMARY KEY,
     actuator_id INTEGER NOT NULL REFERENCES actuators(id) ON DELETE CASCADE,
-    usuario_id INTEGER NOT NULL,
+    usuario_id INTEGER REFERENCES usuario(id) ON DELETE SET NULL,
     accion VARCHAR(30) NOT NULL,
     valor_ajuste VARCHAR(50),
     resultado VARCHAR(20) DEFAULT 'exitoso',
@@ -274,19 +278,17 @@ INSERT INTO modulo (nombre, descripcion) VALUES
 ('greenhouse_settings', 'Configuraciones'),
 ('usuario', 'Gestion de usuarios');
 
--- Permisos: Todos los roles tienen acceso a todos los modulos
--- Administrador: acceso total
-INSERT INTO moduloxrol (rol_id, modulo_id)
-SELECT r.id, m.id FROM rol r, modulo m WHERE r.nombre = 'administrador';
+-- Permisos para Administrador: acceso total (TRUE, TRUE, TRUE, TRUE)
+INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar, puede_eliminar)
+SELECT r.id, m.id, TRUE, TRUE, TRUE, TRUE FROM rol r, modulo m WHERE r.nombre = 'administrador';
 
--- Operador: acceso total
-INSERT INTO moduloxrol (rol_id, modulo_id)
-SELECT r.id, m.id FROM rol r, modulo m WHERE r.nombre = 'operador';
+-- Permisos para Operador: puede_ver, puede_crear, puede_editar, NO puede_eliminar
+INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar, puede_eliminar)
+SELECT r.id, m.id, TRUE, TRUE, TRUE, FALSE FROM rol r, modulo m WHERE r.nombre = 'operador';
 
--- Readonly: solo lectura (moduloxrol con estado=FALSE para denotar solo lectura)
--- Para readonly, todos los modulos pero sin permiso de escritura (indicado por rol readonly)
-INSERT INTO moduloxrol (rol_id, modulo_id)
-SELECT r.id, m.id FROM rol r, modulo m WHERE r.nombre = 'readonly';
+-- Permisos para Readonly: solo puede_ver
+INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar, puede_eliminar)
+SELECT r.id, m.id, TRUE, FALSE, FALSE, FALSE FROM rol r, modulo m WHERE r.nombre = 'readonly';
 
 -- =====================================================
 -- Seed Data: Tablas Core
