@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://api-growapp.onrender.com';
 
 document.querySelectorAll('nav button').forEach(btn => {
     btn.addEventListener('click', () => {
