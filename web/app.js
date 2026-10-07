@@ -1,4 +1,4 @@
-const API_BASE = 'https://api-growapp.onrender.com';
+const API_BASE = 'https://apigrowapp.onrender.com';
 
 document.querySelectorAll('nav button').forEach(btn => {
     btn.addEventListener('click', () => {
