@@ -5,8 +5,8 @@ const pool = require('../config/database');
 // GET /alertas-externas - List all
 router.get('/', async (req, res, next) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM alertas_externas WHERE estado = TRUE');
-        res.json(rows);
+        const result = await pool.query('SELECT * FROM alertas_externas WHERE estado = TRUE');
+        res.json(result.rows);
     } catch (err) {
         next(err);
     }
@@ -16,28 +16,28 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
     try {
         const { mensaje, prioridad } = req.body;
-        const [result] = await pool.query(
-            'INSERT INTO alertas_externas (mensaje, prioridad) VALUES (?, ?)',
+        const result = await pool.query(
+            'INSERT INTO alertas_externas (mensaje, prioridad, estado) VALUES ($1, $2, TRUE) RETURNING *',
             [mensaje, prioridad || 'media']
         );
-        res.status(201).json({ id: result.insertId, mensaje, prioridad: prioridad || 'media' });
+        res.status(201).json(result.rows[0]);
     } catch (err) {
         next(err);
     }
 });
 
-// PUT /alertas-externas/:id - Update estado
+// PUT /alertas-externas/:id - Update
 router.put('/:id', async (req, res, next) => {
     try {
         const { mensaje, prioridad } = req.body;
-        const [result] = await pool.query(
-            'UPDATE alertas_externas SET mensaje = ?, prioridad = ? WHERE id = ? AND estado = TRUE',
+        const result = await pool.query(
+            'UPDATE alertas_externas SET mensaje = $1, prioridad = $2, actualizado = CURRENT_TIMESTAMP WHERE id = $3 AND estado = TRUE RETURNING *',
             [mensaje, prioridad, req.params.id]
         );
-        if (result.affectedRows === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Alerta no encontrada' });
         }
-        res.json({ id: req.params.id, mensaje, prioridad });
+        res.json(result.rows[0]);
     } catch (err) {
         next(err);
     }
@@ -46,11 +46,11 @@ router.put('/:id', async (req, res, next) => {
 // DELETE /alertas-externas/:id - Soft delete
 router.delete('/:id', async (req, res, next) => {
     try {
-        const [result] = await pool.query(
-            'UPDATE alertas_externas SET estado = FALSE WHERE id = ? AND estado = TRUE',
+        const result = await pool.query(
+            'UPDATE alertas_externas SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING *',
             [req.params.id]
         );
-        if (result.affectedRows === 0) {
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Alerta no encontrada' });
         }
         res.json({ message: 'Alerta eliminada' });
