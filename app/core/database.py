@@ -6,14 +6,23 @@ load_dotenv()
 
 class Database:
     def __init__(self):
-        self.database_url = os.getenv("DATABASE_URL")
+        self.host = os.getenv("DB_HOST")
+        self.database = os.getenv("DB_NAME")
+        self.user = os.getenv("DB_USER")
+        self.password = os.getenv("DB_PASSWORD")
+        self.port = os.getenv("DB_PORT", "5432")
         self._pool = None
 
     async def get_pool(self):
         if self._pool is None:
             self._pool = await asyncpg.create_pool(
-                self.database_url,
-                command_timeout=60
+                host=self.host,
+                database=self.database,
+                user=self.user,
+                password=self.password,
+                port=int(self.port),
+                command_timeout=60,
+                ssl=True
             )
         return self._pool
 
