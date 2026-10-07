@@ -21,7 +21,6 @@ class GreenhouseUpdate(BaseModel):
 
 class Greenhouse(GreenhouseBase):
     id: int
-    fecha_creacion: Optional[datetime] = None
     creado: Optional[datetime] = None
     actualizado: Optional[datetime] = None
 

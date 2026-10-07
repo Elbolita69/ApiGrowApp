@@ -23,7 +23,6 @@ class SensorUpdate(BaseModel):
 
 class Sensor(SensorBase):
     id: int
-    fecha_instalacion: Optional[datetime] = None
     creado: Optional[datetime] = None
     actualizado: Optional[datetime] = None
 
