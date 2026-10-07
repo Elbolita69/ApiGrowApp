@@ -10,7 +10,7 @@ class AlertBase(BaseModel):
     valor_actual: Optional[float] = None
     umbral: Optional[float] = None
     prioridad: str = "media"
-    estado: str = "activa"
+    estado: bool = True
 
 class AlertCreate(AlertBase):
     pass
@@ -23,12 +23,14 @@ class AlertUpdate(BaseModel):
     valor_actual: Optional[float] = None
     umbral: Optional[float] = None
     prioridad: Optional[str] = None
-    estado: Optional[str] = None
+    estado: Optional[bool] = None
 
 class Alert(AlertBase):
     id: int
     timestamp: Optional[datetime] = None
     resuelta_en: Optional[datetime] = None
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

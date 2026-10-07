@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 class IrrigationZoneBase(BaseModel):
     greenhouse_id: int
@@ -7,7 +8,7 @@ class IrrigationZoneBase(BaseModel):
     capacidadLitros_min: Optional[float] = None
     capacidadLitros_max: Optional[float] = None
     tipo: str = "gotas"
-    estado: str = "activo"
+    estado: bool = True
 
 class IrrigationZoneCreate(IrrigationZoneBase):
     pass
@@ -18,10 +19,12 @@ class IrrigationZoneUpdate(BaseModel):
     capacidadLitros_min: Optional[float] = None
     capacidadLitros_max: Optional[float] = None
     tipo: Optional[str] = None
-    estado: Optional[str] = None
+    estado: Optional[bool] = None
 
 class IrrigationZone(IrrigationZoneBase):
     id: int
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

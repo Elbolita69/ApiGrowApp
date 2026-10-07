@@ -9,7 +9,7 @@ class CropBatchBase(BaseModel):
     fecha_cosecha_estimada: Optional[date] = None
     fecha_cosecha_real: Optional[date] = None
     cantidad_plantas: Optional[int] = None
-    estado: str = "creciendo"
+    estado: bool = True
     notas: Optional[str] = None
 
 class CropBatchCreate(CropBatchBase):
@@ -22,11 +22,13 @@ class CropBatchUpdate(BaseModel):
     fecha_cosecha_estimada: Optional[date] = None
     fecha_cosecha_real: Optional[date] = None
     cantidad_plantas: Optional[int] = None
-    estado: Optional[str] = None
+    estado: Optional[bool] = None
     notas: Optional[str] = None
 
 class CropBatch(CropBatchBase):
     id: int
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

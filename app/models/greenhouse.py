@@ -7,7 +7,7 @@ class GreenhouseBase(BaseModel):
     ubicacion: Optional[str] = None
     area_metros_cuadrados: Optional[float] = None
     capacidad_maxima: Optional[int] = None
-    estado: str = "activo"
+    estado: bool = True
 
 class GreenhouseCreate(GreenhouseBase):
     pass
@@ -17,11 +17,13 @@ class GreenhouseUpdate(BaseModel):
     ubicacion: Optional[str] = None
     area_metros_cuadrados: Optional[float] = None
     capacidad_maxima: Optional[int] = None
-    estado: Optional[str] = None
+    estado: Optional[bool] = None
 
 class Greenhouse(GreenhouseBase):
     id: int
     fecha_creacion: Optional[datetime] = None
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

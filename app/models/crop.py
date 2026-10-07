@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 class CropBase(BaseModel):
     nombre: str
@@ -12,6 +13,7 @@ class CropBase(BaseModel):
     ph_max: Optional[float] = None
     ciclo_dias: Optional[int] = None
     descripcion: Optional[str] = None
+    estado: bool = True
 
 class CropCreate(CropBase):
     pass
@@ -27,9 +29,12 @@ class CropUpdate(BaseModel):
     ph_max: Optional[float] = None
     ciclo_dias: Optional[int] = None
     descripcion: Optional[str] = None
+    estado: Optional[bool] = None
 
 class Crop(CropBase):
     id: int
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

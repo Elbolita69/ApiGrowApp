@@ -7,7 +7,7 @@ class ActuatorBase(BaseModel):
     tipo: str
     nombre: str
     ubicacion: Optional[str] = None
-    estado: str = "inactivo"
+    estado: bool = True
 
 class ActuatorCreate(ActuatorBase):
     pass
@@ -17,11 +17,13 @@ class ActuatorUpdate(BaseModel):
     tipo: Optional[str] = None
     nombre: Optional[str] = None
     ubicacion: Optional[str] = None
-    estado: Optional[str] = None
+    estado: Optional[bool] = None
 
 class Actuator(ActuatorBase):
     id: int
     fecha_instalacion: Optional[datetime] = None
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

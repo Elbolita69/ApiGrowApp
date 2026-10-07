@@ -12,6 +12,7 @@ class GreenhouseSettingBase(BaseModel):
     ph_min: float = 5.50
     ph_max: float = 7.00
     intervalo_lectura_minutos: int = 15
+    estado: bool = True
 
 class GreenhouseSettingCreate(GreenhouseSettingBase):
     pass
@@ -25,10 +26,13 @@ class GreenhouseSettingUpdate(BaseModel):
     ph_min: Optional[float] = None
     ph_max: Optional[float] = None
     intervalo_lectura_minutos: Optional[int] = None
+    estado: Optional[bool] = None
 
 class GreenhouseSetting(GreenhouseSettingBase):
     id: int
     actualizado_en: Optional[datetime] = None
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

@@ -8,7 +8,7 @@ class SensorBase(BaseModel):
     nombre: str
     unidad: str
     ubicacion: Optional[str] = None
-    estado: str = "activo"
+    estado: bool = True
 
 class SensorCreate(SensorBase):
     pass
@@ -19,11 +19,13 @@ class SensorUpdate(BaseModel):
     nombre: Optional[str] = None
     unidad: Optional[str] = None
     ubicacion: Optional[str] = None
-    estado: Optional[str] = None
+    estado: Optional[bool] = None
 
 class Sensor(SensorBase):
     id: int
     fecha_instalacion: Optional[datetime] = None
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True

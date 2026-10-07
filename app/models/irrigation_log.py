@@ -9,6 +9,7 @@ class IrrigationLogBase(BaseModel):
     modo: str = "automatico"
     resultado: str = "exitoso"
     notas: Optional[str] = None
+    estado: bool = True
 
 class IrrigationLogCreate(IrrigationLogBase):
     pass
@@ -20,10 +21,13 @@ class IrrigationLogUpdate(BaseModel):
     modo: Optional[str] = None
     resultado: Optional[str] = None
     notas: Optional[str] = None
+    estado: Optional[bool] = None
 
 class IrrigationLog(IrrigationLogBase):
     id: int
     timestamp: Optional[datetime] = None
+    creado: Optional[datetime] = None
+    actualizado: Optional[datetime] = None
 
     class Config:
         from_attributes = True
