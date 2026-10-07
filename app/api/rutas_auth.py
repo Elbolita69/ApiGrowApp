@@ -71,11 +71,22 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Get rol name for token
+    conn2 = await db.get_connection()
+    try:
+        rol_row = await conn2.fetchrow(
+            "SELECT nombre FROM rol WHERE id = $1",
+            user["rol_id"],
+        )
+        rol_nombre = rol_row["nombre"] if rol_row else "readonly"
+    finally:
+        await db.release_connection(conn2)
+
     access_token = create_access_token(
         data={
             "sub": str(user["id"]),
             "username": user["username"],
-            "rol": user["rol_id"],
+            "rol": rol_nombre,
         },
         expires_delta=timedelta(hours=24),
     )
