@@ -4,9 +4,7 @@
 -- 16 tablas: 12 core + 4 RBAC
 -- =====================================================
 
--- =====================================================
 -- RBAC: Roles
--- =====================================================
 CREATE TABLE IF NOT EXISTS rol (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE,
@@ -16,9 +14,7 @@ CREATE TABLE IF NOT EXISTS rol (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
 -- RBAC: Modulos API
--- =====================================================
 CREATE TABLE IF NOT EXISTS modulo (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
@@ -28,9 +24,7 @@ CREATE TABLE IF NOT EXISTS modulo (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
 -- RBAC: Matriz de Permisos (rol x modulo)
--- =====================================================
 CREATE TABLE IF NOT EXISTS moduloxrol (
     id SERIAL PRIMARY KEY,
     rol_id INTEGER NOT NULL REFERENCES rol(id) ON DELETE CASCADE,
@@ -45,9 +39,7 @@ CREATE TABLE IF NOT EXISTS moduloxrol (
     UNIQUE(rol_id, modulo_id)
 );
 
--- =====================================================
--- 1. Tabla: Invernaderos
--- =====================================================
+-- Tabla: Invernaderos
 CREATE TABLE IF NOT EXISTS greenhouses (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -59,9 +51,20 @@ CREATE TABLE IF NOT EXISTS greenhouses (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 2. Tabla: Sensores
--- =====================================================
+-- Tabla: Usuarios
+CREATE TABLE IF NOT EXISTS usuario (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    nombre VARCHAR(100),
+    rol_id INTEGER REFERENCES rol(id) ON DELETE SET NULL,
+    estado BOOLEAN DEFAULT TRUE,
+    creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla: Sensores
 CREATE TABLE IF NOT EXISTS sensors (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -74,9 +77,7 @@ CREATE TABLE IF NOT EXISTS sensors (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 3. Tabla: Lecturas de Sensores
--- =====================================================
+-- Tabla: Lecturas de Sensores
 CREATE TABLE IF NOT EXISTS sensor_readings (
     id SERIAL PRIMARY KEY,
     sensor_id INTEGER NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
@@ -87,9 +88,7 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 4. Tabla: Cultivos (catalogo)
--- =====================================================
+-- Tabla: Cultivos
 CREATE TABLE IF NOT EXISTS crops (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -107,9 +106,7 @@ CREATE TABLE IF NOT EXISTS crops (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 5. Tabla: Lotes de Cultivos
--- =====================================================
+-- Tabla: Lotes de Cultivos
 CREATE TABLE IF NOT EXISTS crop_batches (
     id SERIAL PRIMARY KEY,
     crop_id INTEGER REFERENCES crops(id) ON DELETE SET NULL,
@@ -125,9 +122,7 @@ CREATE TABLE IF NOT EXISTS crop_batches (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 6. Tabla: Alertas
--- =====================================================
+-- Tabla: Alertas
 CREATE TABLE IF NOT EXISTS alerts (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -144,9 +139,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 7. Tabla: Zonas de Riego
--- =====================================================
+-- Tabla: Zonas de Riego
 CREATE TABLE IF NOT EXISTS irrigation_zones (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -159,9 +152,7 @@ CREATE TABLE IF NOT EXISTS irrigation_zones (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 8. Tabla: Historial de Riego
--- =====================================================
+-- Tabla: Historial de Riego
 CREATE TABLE IF NOT EXISTS irrigation_logs (
     id SERIAL PRIMARY KEY,
     zone_id INTEGER NOT NULL REFERENCES irrigation_zones(id) ON DELETE CASCADE,
@@ -175,9 +166,7 @@ CREATE TABLE IF NOT EXISTS irrigation_logs (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 9. Tabla: Actuadores
--- =====================================================
+-- Tabla: Actuadores
 CREATE TABLE IF NOT EXISTS actuators (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -191,9 +180,7 @@ CREATE TABLE IF NOT EXISTS actuators (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 10. Tabla: Control de Actuadores
--- =====================================================
+-- Tabla: Control de Actuadores
 CREATE TABLE IF NOT EXISTS actuator_controls (
     id SERIAL PRIMARY KEY,
     actuator_id INTEGER NOT NULL REFERENCES actuators(id) ON DELETE CASCADE,
@@ -206,9 +193,7 @@ CREATE TABLE IF NOT EXISTS actuator_controls (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 11. Tabla: Configuraciones del Invernadero
--- =====================================================
+-- Tabla: Configuraciones del Invernadero
 CREATE TABLE IF NOT EXISTS greenhouse_settings (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE UNIQUE,
@@ -225,24 +210,39 @@ CREATE TABLE IF NOT EXISTS greenhouse_settings (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- 12. Tabla: Usuarios
--- =====================================================
-CREATE TABLE IF NOT EXISTS usuario (
+-- Tabla: Sensores Externos
+CREATE TABLE IF NOT EXISTS sensores_externos (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    nombre VARCHAR(100),
-    rol_id INTEGER REFERENCES rol(id) ON DELETE SET NULL,
+    tipo VARCHAR(100) NOT NULL,
+    valor_actual NUMERIC(10,2),
+    ubicacion VARCHAR(255),
     estado BOOLEAN DEFAULT TRUE,
     creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =====================================================
--- Indices para optimizar consultas frecuentes
--- =====================================================
+-- Tabla: Lecturas Externas
+CREATE TABLE IF NOT EXISTS lecturas_externas (
+    id SERIAL PRIMARY KEY,
+    sensor_id INTEGER REFERENCES sensores_externos(id) ON DELETE CASCADE,
+    valor NUMERIC(10,2) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado BOOLEAN DEFAULT TRUE,
+    creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla: Alertas Externas
+CREATE TABLE IF NOT EXISTS alertas_externas (
+    id SERIAL PRIMARY KEY,
+    mensaje TEXT NOT NULL,
+    prioridad VARCHAR(20) DEFAULT 'media',
+    estado BOOLEAN DEFAULT TRUE,
+    creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indices
 CREATE INDEX IF NOT EXISTS idx_sensor_readings_sensor_id ON sensor_readings(sensor_id);
 CREATE INDEX IF NOT EXISTS idx_sensor_readings_timestamp ON sensor_readings(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_greenhouse_id ON alerts(greenhouse_id);
@@ -253,17 +253,13 @@ CREATE INDEX IF NOT EXISTS idx_actuator_controls_actuator_id ON actuator_control
 CREATE INDEX IF NOT EXISTS idx_usuario_username ON usuario(username);
 CREATE INDEX IF NOT EXISTS idx_usuario_email ON usuario(email);
 
--- =====================================================
--- Seed Data: RBAC
--- =====================================================
-
--- Roles
+-- Seed Data: Roles
 INSERT INTO rol (nombre, descripcion) VALUES
 ('administrador', 'Administrador del sistema con acceso total'),
 ('operador', 'Operador de invernaderos con permisos de lectura y escritura'),
 ('readonly', 'Solo lectura, sin permisos de escritura');
 
--- Modulos (11 modulos correspondientes a cada tabla/ruta)
+-- Seed Data: Modulos
 INSERT INTO modulo (nombre, descripcion) VALUES
 ('greenhouses', 'Gestion de invernaderos'),
 ('sensors', 'Gestion de sensores'),
@@ -278,26 +274,24 @@ INSERT INTO modulo (nombre, descripcion) VALUES
 ('greenhouse_settings', 'Configuraciones'),
 ('usuario', 'Gestion de usuarios');
 
--- Permisos para Administrador: acceso total (TRUE, TRUE, TRUE, TRUE)
+-- Seed Data: Permisos para Administrador
 INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar, puede_eliminar)
 SELECT r.id, m.id, TRUE, TRUE, TRUE, TRUE FROM rol r, modulo m WHERE r.nombre = 'administrador';
 
--- Permisos para Operador: puede_ver, puede_crear, puede_editar, NO puede_eliminar
+-- Seed Data: Permisos para Operador
 INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar, puede_eliminar)
 SELECT r.id, m.id, TRUE, TRUE, TRUE, FALSE FROM rol r, modulo m WHERE r.nombre = 'operador';
 
--- Permisos para Readonly: solo puede_ver
+-- Seed Data: Permisos para Readonly
 INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar, puede_eliminar)
 SELECT r.id, m.id, TRUE, FALSE, FALSE, FALSE FROM rol r, modulo m WHERE r.nombre = 'readonly';
 
--- =====================================================
--- Seed Data: Tablas Core
--- =====================================================
-
+-- Seed Data: Invernaderos
 INSERT INTO greenhouses (nombre, ubicacion, area_metros_cuadrados, capacidad_maxima) VALUES
 ('Invernadero Principal', 'Zona Norte - Sector A', 500.00, 1000),
 ('Invernadero Secundario', 'Zona Sur - Sector B', 300.00, 500);
 
+-- Seed Data: Cultivos
 INSERT INTO crops (nombre, nombre_cientifico, temperatura_min, temperatura_max, humedad_min, humedad_max, ciclo_dias) VALUES
 ('Tomate', 'Solanum lycopersicum', 18.00, 27.00, 60.00, 80.00, 90),
 ('Lechuga', 'Lactuca sativa', 10.00, 20.00, 70.00, 90.00, 45),
@@ -305,6 +299,7 @@ INSERT INTO crops (nombre, nombre_cientifico, temperatura_min, temperatura_max, 
 ('Pimiento', 'Capsicum annuum', 18.00, 28.00, 50.00, 70.00, 75),
 ('Fresas', 'Fragaria × ananassa', 15.00, 25.00, 65.00, 80.00, 120);
 
+-- Seed Data: Sensores
 INSERT INTO sensors (greenhouse_id, tipo, nombre, unidad, ubicacion) VALUES
 (1, 'temperatura', 'Sensor Temp 1', '°C', 'Esquina NW'),
 (1, 'temperatura', 'Sensor Temp 2', '°C', 'Esquina SE'),
@@ -315,23 +310,36 @@ INSERT INTO sensors (greenhouse_id, tipo, nombre, unidad, ubicacion) VALUES
 (2, 'temperatura', 'Sensor Temp 3', '°C', 'Esquina NW'),
 (2, 'humedad', 'Sensor Humedad 2', '%', 'Centro');
 
+-- Seed Data: Zonas de Riego
 INSERT INTO irrigation_zones (greenhouse_id, nombre, capacidad_litros_min, capacidad_litros_max, tipo) VALUES
 (1, 'Zona A - Tomates', 100.00, 500.00, 'gotas'),
 (1, 'Zona B - Lechugas', 50.00, 200.00, 'gotas'),
-(2, 'Zona C - General', 150.00, 600.00, 'aspersión');
+(2, 'Zona C - General', 150.00, 600.00, 'aspersion');
 
+-- Seed Data: Actuadores
 INSERT INTO actuators (greenhouse_id, tipo, nombre, ubicacion) VALUES
 (1, 'ventana', 'Ventana Norte', 'Pared Norte'),
 (1, 'ventana', 'Ventana Sur', 'Pared Sur'),
 (1, 'ventilador', 'Ventilador Principal', 'Centro'),
-(1, 'bomba_agua', 'Bomba Riego Principal', 'Sala Técnica'),
+(1, 'bomba_agua', 'Bomba Riego Principal', 'Sala Tecnica'),
 (1, 'luz_artificial', 'Luces Crecimiento', 'Techo'),
 (2, 'ventilador', 'Ventilador Secundario', 'Esquina SE');
 
+-- Seed Data: Configuraciones
 INSERT INTO greenhouse_settings (greenhouse_id, temp_min, temp_max, humedad_min, humedad_max) VALUES
 (1, 18.00, 28.00, 60.00, 80.00),
 (2, 15.00, 30.00, 50.00, 85.00);
 
+-- Seed Data: Usuarios
 INSERT INTO usuario (username, email, password_hash, nombre, rol_id) VALUES
 ('admin', 'admin@greenhouse.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4p', 'Administrador', (SELECT id FROM rol WHERE nombre = 'administrador')),
-('operador1', 'operador1@greenhouse.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4p', 'Juan Pérez', (SELECT id FROM rol WHERE nombre = 'operador'));
+('operador1', 'operador1@greenhouse.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4p', 'Juan Perez', (SELECT id FROM rol WHERE nombre = 'operador'));
+
+-- Seed Data: Sensores Externos
+INSERT INTO sensores_externos (tipo, valor_actual, ubicacion) VALUES
+('temperatura', 25.50, 'Externo Norte'),
+('humedad', 65.00, 'Externo Sur');
+
+-- Seed Data: Alertas Externas
+INSERT INTO alertas_externas (mensaje, prioridad) VALUES
+('Sensor externo desconectado', 'alta');
