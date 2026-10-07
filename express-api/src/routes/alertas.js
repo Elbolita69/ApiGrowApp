@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// GET /alertas-externas - List all
 router.get('/', async (req, res, next) => {
     try {
         const result = await pool.query('SELECT * FROM alertas_externas WHERE estado = TRUE');
@@ -12,7 +11,6 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-// POST /alertas-externas - Create
 router.post('/', async (req, res, next) => {
     try {
         const { mensaje, prioridad } = req.body;
@@ -26,7 +24,6 @@ router.post('/', async (req, res, next) => {
     }
 });
 
-// PUT /alertas-externas/:id - Update
 router.put('/:id', async (req, res, next) => {
     try {
         const { mensaje, prioridad } = req.body;
@@ -43,7 +40,6 @@ router.put('/:id', async (req, res, next) => {
     }
 });
 
-// DELETE /alertas-externas/:id - Soft delete
 router.delete('/:id', async (req, res, next) => {
     try {
         const result = await pool.query(

@@ -15,7 +15,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS para permitir conexiones desde el frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Registrar rutas
 app.include_router(rutas_greenhouses)
 app.include_router(rutas_sensors)
 app.include_router(rutas_sensor_readings)

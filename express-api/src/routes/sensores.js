@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// GET /sensores-externos - List all
 router.get('/', async (req, res, next) => {
     try {
         const result = await pool.query('SELECT * FROM sensores_externos WHERE estado = TRUE');
@@ -12,7 +11,6 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-// POST /sensores-externos - Create
 router.post('/', async (req, res, next) => {
     try {
         const { tipo, valor_actual, ubicacion } = req.body;
@@ -26,7 +24,6 @@ router.post('/', async (req, res, next) => {
     }
 });
 
-// GET /sensores-externos/:id - Get one
 router.get('/:id', async (req, res, next) => {
     try {
         const result = await pool.query(
@@ -42,7 +39,6 @@ router.get('/:id', async (req, res, next) => {
     }
 });
 
-// PUT /sensores-externos/:id - Update
 router.put('/:id', async (req, res, next) => {
     try {
         const { tipo, valor_actual, ubicacion } = req.body;
@@ -59,7 +55,6 @@ router.put('/:id', async (req, res, next) => {
     }
 });
 
-// DELETE /sensores-externos/:id - Soft delete
 router.delete('/:id', async (req, res, next) => {
     try {
         const result = await pool.query(

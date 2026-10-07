@@ -71,7 +71,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Get rol name for token
     conn2 = await db.get_connection()
     try:
         rol_row = await conn2.fetchrow(

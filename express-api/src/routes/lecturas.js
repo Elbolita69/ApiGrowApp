@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/database');
 
-// GET /lecturas-externas - List all
 router.get('/', async (req, res, next) => {
     try {
         const result = await pool.query('SELECT * FROM lecturas_externas WHERE estado = TRUE ORDER BY timestamp DESC');
@@ -12,7 +11,6 @@ router.get('/', async (req, res, next) => {
     }
 });
 
-// POST /lecturas-externas - Create
 router.post('/', async (req, res, next) => {
     try {
         const { sensor_id, valor, timestamp } = req.body;
