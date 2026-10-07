@@ -10,3 +10,4 @@ from app.api.rutas_irrigation_log import router as rutas_irrigation_logs
 from app.api.rutas_actuator import router as rutas_actuators
 from app.api.rutas_actuator_control import router as rutas_actuator_controls
 from app.api.rutas_greenhouse_setting import router as rutas_greenhouse_settings
+from app.api.rutas_auth import router as rutas_auth

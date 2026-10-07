@@ -5,7 +5,8 @@ from app.api import (
     rutas_greenhouses, rutas_sensors, rutas_sensor_readings,
     rutas_crops, rutas_crop_batches, rutas_users,
     rutas_alerts, rutas_irrigation_zones, rutas_irrigation_logs,
-    rutas_actuators, rutas_actuator_controls, rutas_greenhouse_settings
+    rutas_actuators, rutas_actuator_controls, rutas_greenhouse_settings,
+    rutas_auth
 )
 
 app = FastAPI(
@@ -36,6 +37,7 @@ app.include_router(rutas_irrigation_logs)
 app.include_router(rutas_actuators)
 app.include_router(rutas_actuator_controls)
 app.include_router(rutas_greenhouse_settings)
+app.include_router(rutas_auth)
 
 @app.get("/")
 async def root():
