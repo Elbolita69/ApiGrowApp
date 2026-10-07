@@ -506,4 +506,43 @@ document.getElementById('zone-form').addEventListener('submit', async (e) => {
     }
 });
 
+document.getElementById('batch-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = cleanFormData(new FormData(e.target));
+    try {
+        await apiPost('/crop-batches/', data);
+        closeModal('batch-modal');
+        loadBatches();
+        e.target.reset();
+    } catch (err) {
+        alert('Error al crear lote: ' + err.message);
+    }
+});
+
+document.getElementById('actuator-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = cleanFormData(new FormData(e.target));
+    try {
+        await apiPost('/actuators/', data);
+        closeModal('actuator-modal');
+        loadActuators();
+        e.target.reset();
+    } catch (err) {
+        alert('Error al crear actuador: ' + err.message);
+    }
+});
+
+document.getElementById('user-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = cleanFormData(new FormData(e.target));
+    try {
+        await apiPost('/users/', data);
+        closeModal('user-modal');
+        loadUsers();
+        e.target.reset();
+    } catch (err) {
+        alert('Error al crear usuario: ' + err.message);
+    }
+});
+
 loadDashboard();
