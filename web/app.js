@@ -327,7 +327,8 @@ async function loadIrrigation() {
         ` : '<div class="empty-state">No hay historial de riego</div>';
         document.getElementById('irrigation-logs').innerHTML = logsHtml;
     } catch (e) {
-        console.error('Irrigation error:', e);
+        document.getElementById('zones-list').innerHTML = '<div class="empty-state">Error al cargar zonas: ' + e.message + '</div>';
+        document.getElementById('irrigation-logs').innerHTML = '<div class="empty-state">Error al cargar historial</div>';
     }
 }
 
