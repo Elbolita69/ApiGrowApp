@@ -1,4 +1,5 @@
 from app.core.database import Database
+from app.core.auth import get_password_hash
 from app.models.user import User, UserCreate, UserUpdate
 from typing import Optional, List
 
@@ -40,7 +41,7 @@ class UserRepository:
             row = await conn.fetchrow(
                 """INSERT INTO usuario (username, email, password_hash, nombre, rol_id, estado)
                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
-                user.username, user.email, user.password, user.nombre, user.rol_id, user.estado
+                user.username, user.email, get_password_hash(user.password), user.nombre, user.rol_id, user.estado
             )
             await conn.execute("COMMIT;")
             return row['id']
