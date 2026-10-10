@@ -1,7 +1,7 @@
-const API_BASE = 'https://apigrowapp.onrender.com';
-
+// Nav buttons
 document.querySelectorAll('nav button').forEach(btn => {
     btn.addEventListener('click', () => {
+        if (!getToken()) { showLogin(); return; }
         document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         btn.classList.add('active');
@@ -11,7 +11,9 @@ document.querySelectorAll('nav button').forEach(btn => {
 });
 
 function openModal(id) {
-    document.getElementById(id).classList.add('active');
+    const modal = document.getElementById(id);
+    if (!modal) { console.error('Modal not found:', id); return; }
+    modal.classList.add('active');
 }
 
 function closeModal(id) {
@@ -27,7 +29,7 @@ document.querySelectorAll('.modal').forEach(modal => {
 });
 
 async function apiGet(endpoint) {
-    const res = await fetch(`${API_BASE}${endpoint}`);
+    const res = await fetch(`${API_BASE}${endpoint}`, { headers: getHeaders() });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
 }
@@ -35,7 +37,7 @@ async function apiGet(endpoint) {
 async function apiPost(endpoint, data) {
     const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getHeaders() },
         body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -43,7 +45,7 @@ async function apiPost(endpoint, data) {
 }
 
 async function apiDelete(endpoint) {
-    const res = await fetch(`${API_BASE}${endpoint}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}${endpoint}`, { method: 'DELETE', headers: getHeaders() });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
 }
@@ -269,8 +271,8 @@ async function loadAlerts() {
                             <td>${a.tipo}</td>
                             <td>${a.mensaje}</td>
                             <td><span class="badge ${a.prioridad === 'critica' ? 'badge-danger' : a.prioridad === 'alta' ? 'badge-warning' : 'badge-info'}">${a.prioridad}</span></td>
-                            <td><span class="badge ${a.estado === 'activa' ? 'badge-danger' : 'badge-success'}">${a.estado}</span></td>
-                            <td>${new Date(a.timestamp).toLocaleString()}</td>
+                            <td><span class="badge ${a.estado_alerta === 'activa' ? 'badge-danger' : 'badge-success'}">${a.estado_alerta}</span></td>
+                            <td>${new Date(a.creado).toLocaleString()}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -349,7 +351,7 @@ async function loadActuators() {
                             <td><strong>${a.nombre}</strong></td>
                             <td><span class="badge badge-info">${a.tipo}</span></td>
                             <td>${a.ubicacion || '-'}</td>
-                            <td><span class="badge ${a.estado === 'activo' ? 'badge-success' : 'badge-warning'}">${a.estado}</span></td>
+                            <td><span class="badge badge-success">${a.estado_actuador}</span></td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -368,7 +370,7 @@ async function loadActuators() {
                             <td>${c.accion}</td>
                             <td>${c.valor_ajuste || '-'}</td>
                             <td><span class="badge ${c.resultado === 'exitoso' ? 'badge-success' : 'badge-danger'}">${c.resultado}</span></td>
-                            <td>${new Date(c.timestamp).toLocaleString()}</td>
+                            <td>${new Date(c.creado).toLocaleString()}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -411,7 +413,7 @@ async function loadUsers() {
         const data = await apiGet('/users/');
         const html = data.length ? `
             <table>
-                <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Nombre</th><th>Rol</th><th>Estado</th></tr></thead>
+                <thead><tr><th>ID</th><th>Username</th><th>Email</th><th>Nombre</th><th>Rol ID</th><th>Estado</th></tr></thead>
                 <tbody>
                     ${data.map(u => `
                         <tr>
@@ -419,7 +421,7 @@ async function loadUsers() {
                             <td><strong>${u.username}</strong></td>
                             <td>${u.email}</td>
                             <td>${u.nombre || '-'}</td>
-                            <td><span class="badge badge-info">${u.rol}</span></td>
+                            <td><span class="badge badge-info">${u.rol_id}</span></td>
                             <td><span class="badge badge-success">${u.estado}</span></td>
                         </tr>
                     `).join('')}
@@ -434,7 +436,10 @@ async function loadUsers() {
 
 async function resolveAlert(id) {
     try {
-        await fetch(`${API_BASE}/alerts/${id}/resolver`, { method: 'PATCH' });
+        await fetch(`${API_BASE}/alerts/${id}/resolver`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${getToken()}` }
+        });
         loadDashboard();
     } catch (e) {
         alert('Error al resolver alerta');
@@ -448,7 +453,6 @@ function cleanFormData(formData) {
             obj[key] = null;
         } else if (!isNaN(value) && value !== '' && !value.match(/^\d{4}-\d{2}-\d{2}/)) {
             const num = parseFloat(value);
-            // Treat 0 as null for _id fields (foreign keys can't be 0)
             obj[key] = (num === 0 && key.endsWith('_id')) ? null : num;
         } else {
             obj[key] = value;
@@ -548,4 +552,5 @@ document.getElementById('user-form').addEventListener('submit', async (e) => {
     }
 });
 
-loadDashboard();
+// Init
+checkAuth();
