@@ -16,6 +16,7 @@ function showApp() {
     document.getElementById('register-section').style.display = 'none';
     document.querySelector('nav').style.display = 'flex';
     document.querySelector('main').style.display = 'block';
+    document.getElementById('user-info').style.display = 'block';
 }
 
 function showLogin() {
@@ -24,6 +25,7 @@ function showLogin() {
     document.getElementById('register-section').style.display = 'none';
     document.querySelector('nav').style.display = 'none';
     document.querySelector('main').style.display = 'none';
+    document.getElementById('user-info').style.display = 'none';
 }
 
 function showRegister() {
