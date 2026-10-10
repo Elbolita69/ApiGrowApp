@@ -445,7 +445,7 @@ function cleanFormData(formData) {
     for (const [key, value] of formData.entries()) {
         if (value === '') {
             obj[key] = null;
-        } else if (!isNaN(value) && value !== '') {
+        } else if (!isNaN(value) && value !== '' && !value.match(/^\d{4}-\d{2}-\d{2}/)) {
             obj[key] = parseFloat(value);
         } else {
             obj[key] = value;
