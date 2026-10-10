@@ -10,7 +10,7 @@ class UserRepository:
         conn = await self.db.get_connection()
         try:
             rows = await conn.fetch(
-                "SELECT id, username, email, nombre, rol, estado, fecha_registro FROM users ORDER BY id ASC;"
+                "SELECT id, username, email, nombre, rol, estado, fecha_registro FROM usuario ORDER BY id ASC;"
             )
             return rows
         finally:
@@ -20,7 +20,7 @@ class UserRepository:
         conn = await self.db.get_connection()
         try:
             row = await conn.fetchrow(
-                "SELECT id, username, email, nombre, rol, estado, fecha_registro FROM users WHERE id = $1;", user_id
+                "SELECT id, username, email, nombre, rol, estado, fecha_registro FROM usuario WHERE id = $1;", user_id
             )
             return row
         finally:
@@ -29,7 +29,7 @@ class UserRepository:
     async def obtener_por_username(self, username: str):
         conn = await self.db.get_connection()
         try:
-            row = await conn.fetchrow("SELECT * FROM users WHERE username = $1;", username)
+            row = await conn.fetchrow("SELECT * FROM usuario WHERE username = $1;", username)
             return row
         finally:
             await self.db.release_connection(conn)
@@ -38,7 +38,7 @@ class UserRepository:
         conn = await self.db.get_connection()
         try:
             row = await conn.fetchrow(
-                """INSERT INTO users (username, email, password_hash, nombre, rol, estado)
+                """INSERT INTO usuario (username, email, password_hash, nombre, rol, estado)
                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
                 user.username, user.email, user.password, user.nombre, user.rol, user.estado
             )
@@ -65,7 +65,7 @@ class UserRepository:
                 return False
 
             values.append(user_id)
-            query = f"UPDATE users SET {', '.join(fields)} WHERE id = ${idx} RETURNING id;"
+            query = f"UPDATE usuario SET {', '.join(fields)} WHERE id = ${idx} RETURNING id;"
             result = await conn.fetchrow(query, *values)
             await conn.execute("COMMIT;")
             return result is not None
@@ -75,7 +75,7 @@ class UserRepository:
     async def eliminar(self, user_id: int) -> bool:
         conn = await self.db.get_connection()
         try:
-            result = await conn.fetchrow("DELETE FROM users WHERE id = $1 RETURNING id;", user_id)
+            result = await conn.fetchrow("DELETE FROM usuario WHERE id = $1 RETURNING id;", user_id)
             await conn.execute("COMMIT;")
             return result is not None
         finally:

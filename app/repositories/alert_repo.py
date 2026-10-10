@@ -14,7 +14,7 @@ class AlertRepository:
                 "FROM alerts a "
                 "LEFT JOIN greenhouses g ON a.greenhouse_id = g.id "
                 "LEFT JOIN sensors s ON a.sensor_id = s.id "
-                "ORDER BY a.timestamp DESC LIMIT 100;"
+                "ORDER BY a.creado DESC LIMIT 100;"
             )
             rows = await conn.fetch(query)
             return rows
@@ -45,7 +45,7 @@ class AlertRepository:
                 "LEFT JOIN greenhouses g ON a.greenhouse_id = g.id "
                 "LEFT JOIN sensors s ON a.sensor_id = s.id "
                 "WHERE a.estado_alerta = 'activa' "
-                "ORDER BY a.timestamp DESC;"
+                "ORDER BY a.creado DESC;"
             )
             rows = await conn.fetch(query)
             return rows

@@ -14,8 +14,8 @@ class ActuatorControlRepository:
                           u.username as usuario_username
                    FROM actuator_controls ac
                    JOIN actuators a ON ac.actuator_id = a.id
-                   LEFT JOIN users u ON ac.usuario_id = u.id
-                   ORDER BY ac.timestamp DESC LIMIT $1;""", limit
+                   LEFT JOIN usuario u ON ac.usuario_id = u.id
+                   ORDER BY ac.creado DESC LIMIT $1;""", limit
             )
             return rows
         finally:
@@ -28,7 +28,7 @@ class ActuatorControlRepository:
                 """SELECT ac.*, a.nombre as actuator_nombre, u.username as usuario_username
                    FROM actuator_controls ac
                    JOIN actuators a ON ac.actuator_id = a.id
-                   LEFT JOIN users u ON ac.usuario_id = u.id
+                   LEFT JOIN usuario u ON ac.usuario_id = u.id
                    WHERE ac.id = $1;""", control_id
             )
             return row
@@ -41,9 +41,9 @@ class ActuatorControlRepository:
             rows = await conn.fetch(
                 """SELECT ac.*, u.username as usuario_username
                    FROM actuator_controls ac
-                   LEFT JOIN users u ON ac.usuario_id = u.id
+                   LEFT JOIN usuario u ON ac.usuario_id = u.id
                    WHERE ac.actuator_id = $1
-                   ORDER BY ac.timestamp DESC LIMIT $2;""", actuator_id, limit
+                   ORDER BY ac.creado DESC LIMIT $2;""", actuator_id, limit
             )
             return rows
         finally:
