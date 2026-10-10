@@ -443,10 +443,12 @@ async function resolveAlert(id) {
 function cleanFormData(formData) {
     const obj = {};
     for (const [key, value] of formData.entries()) {
-        if (value === '') {
+        if (value === '' || value === null) {
             obj[key] = null;
         } else if (!isNaN(value) && value !== '' && !value.match(/^\d{4}-\d{2}-\d{2}/)) {
-            obj[key] = parseFloat(value);
+            const num = parseFloat(value);
+            // Treat 0 as null for _id fields (foreign keys can't be 0)
+            obj[key] = (num === 0 && key.endsWith('_id')) ? null : num;
         } else {
             obj[key] = value;
         }
