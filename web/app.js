@@ -319,7 +319,7 @@ async function loadIrrigation() {
                             <td>${l.cantidad_agua_litros || '-'}</td>
                             <td>${l.modo}</td>
                             <td><span class="badge ${l.resultado === 'exitoso' ? 'badge-success' : 'badge-danger'}">${l.resultado}</span></td>
-                            <td>${new Date(l.timestamp).toLocaleString()}</td>
+                            <td>${new Date(l.creado).toLocaleString()}</td>
                         </tr>
                     `).join('')}
                 </tbody>

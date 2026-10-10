@@ -13,7 +13,7 @@ class IrrigationLogRepository:
                 """SELECT il.*, iz.nombre as zone_nombre
                    FROM irrigation_logs il
                    JOIN irrigation_zones iz ON il.zone_id = iz.id
-                   ORDER BY il.timestamp DESC LIMIT $1;""", limit
+                   ORDER BY il.creado DESC LIMIT $1;""", limit
             )
             return rows
         finally:
@@ -36,7 +36,7 @@ class IrrigationLogRepository:
         conn = await self.db.get_connection()
         try:
             rows = await conn.fetch(
-                "SELECT * FROM irrigation_logs WHERE zone_id = $1 ORDER BY timestamp DESC LIMIT $2;",
+                "SELECT * FROM irrigation_logs WHERE zone_id = $1 ORDER BY creado DESC LIMIT $2;",
                 zone_id, limit
             )
             return rows
