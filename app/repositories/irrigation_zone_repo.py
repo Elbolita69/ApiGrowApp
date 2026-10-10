@@ -46,10 +46,10 @@ class IrrigationZoneRepository:
         conn = await self.db.get_connection()
         try:
             row = await conn.fetchrow(
-                """INSERT INTO irrigation_zones (greenhouse_id, nombre, capacidadLitros_min, capacidadLitros_max, tipo, estado)
+                """INSERT INTO irrigation_zones (greenhouse_id, nombre, capacidad_litros_min, capacidad_litros_max, tipo, estado)
                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
-                zone.greenhouse_id, zone.nombre, zone.capacidadLitros_min,
-                zone.capacidadLitros_max, zone.tipo, zone.estado
+                zone.greenhouse_id, zone.nombre, zone.capacidad_litros_min,
+                zone.capacidad_litros_max, zone.tipo, zone.estado
             )
             await conn.execute("COMMIT;")
             return row['id']
@@ -65,7 +65,7 @@ class IrrigationZoneRepository:
 
             for field, value in [
                 ("greenhouse_id", zone.greenhouse_id), ("nombre", zone.nombre),
-                ("capacidadLitros_min", zone.capacidadLitros_min), ("capacidadLitros_max", zone.capacidadLitros_max),
+                ("capacidad_litros_min", zone.capacidad_litros_min), ("capacidad_litros_max", zone.capacidad_litros_max),
                 ("tipo", zone.tipo), ("estado", zone.estado)
             ]:
                 if value is not None:
