@@ -6,7 +6,7 @@ class UserBase(BaseModel):
     username: str
     email: EmailStr
     nombre: Optional[str] = None
-    rol: str = "operador"
+    rol_id: Optional[int] = None
     estado: bool = True
 
 class UserCreate(UserBase):
@@ -16,13 +16,12 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     nombre: Optional[str] = None
-    rol: Optional[str] = None
+    rol_id: Optional[int] = None
     estado: Optional[bool] = None
 
 class User(UserBase):
     id: int
     password_hash: str
-    fecha_registro: Optional[datetime] = None
     creado: Optional[datetime] = None
     actualizado: Optional[datetime] = None
 

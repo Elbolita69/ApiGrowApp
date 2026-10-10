@@ -10,7 +10,7 @@ class UserRepository:
         conn = await self.db.get_connection()
         try:
             rows = await conn.fetch(
-                "SELECT id, username, email, nombre, rol, estado, fecha_registro FROM usuario ORDER BY id ASC;"
+                "SELECT id, username, email, nombre, rol_id, estado, creado FROM usuario ORDER BY id ASC;"
             )
             return rows
         finally:
@@ -20,7 +20,7 @@ class UserRepository:
         conn = await self.db.get_connection()
         try:
             row = await conn.fetchrow(
-                "SELECT id, username, email, nombre, rol, estado, fecha_registro FROM usuario WHERE id = $1;", user_id
+                "SELECT id, username, email, nombre, rol_id, estado, creado FROM usuario WHERE id = $1;", user_id
             )
             return row
         finally:
@@ -38,9 +38,9 @@ class UserRepository:
         conn = await self.db.get_connection()
         try:
             row = await conn.fetchrow(
-                """INSERT INTO usuario (username, email, password_hash, nombre, rol, estado)
+                """INSERT INTO usuario (username, email, password_hash, nombre, rol_id, estado)
                    VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
-                user.username, user.email, user.password, user.nombre, user.rol, user.estado
+                user.username, user.email, user.password, user.nombre, user.rol_id, user.estado
             )
             await conn.execute("COMMIT;")
             return row['id']
@@ -56,7 +56,7 @@ class UserRepository:
 
             for field, value in [
                 ("username", user.username), ("email", user.email),
-                ("nombre", user.nombre), ("rol", user.rol), ("estado", user.estado)
+                ("nombre", user.nombre), ("rol_id", user.rol_id), ("estado", user.estado)
             ]:
                 if value is not None:
                     fields.append(f"{field} = ${idx}"); values.append(value); idx += 1
