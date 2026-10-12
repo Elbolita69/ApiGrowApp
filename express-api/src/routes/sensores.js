@@ -4,8 +4,8 @@ const pool = require('../config/database');
 
 router.get('/', async (req, res, next) => {
     try {
-        const result = await pool.query('SELECT * FROM sensores_externos WHERE estado = TRUE');
-        res.json(result.rows);
+        const [rows] = await pool.query('SELECT * FROM sensores_externos WHERE estado = TRUE');
+        res.json(rows);
     } catch (err) {
         next(err);
     }
@@ -14,11 +14,12 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
     try {
         const { tipo, valor_actual, ubicacion } = req.body;
-        const result = await pool.query(
-            'INSERT INTO sensores_externos (tipo, valor_actual, ubicacion, estado) VALUES ($1, $2, $3, TRUE) RETURNING *',
+        const [result] = await pool.query(
+            'INSERT INTO sensores_externos (tipo, valor_actual, ubicacion, estado) VALUES (?, ?, ?, TRUE)',
             [tipo, valor_actual, ubicacion]
         );
-        res.status(201).json(result.rows[0]);
+        const [rows] = await pool.query('SELECT * FROM sensores_externos WHERE id = ?', [result.insertId]);
+        res.status(201).json(rows[0]);
     } catch (err) {
         next(err);
     }
@@ -26,14 +27,14 @@ router.post('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
     try {
-        const result = await pool.query(
-            'SELECT * FROM sensores_externos WHERE id = $1 AND estado = TRUE',
+        const [rows] = await pool.query(
+            'SELECT * FROM sensores_externos WHERE id = ? AND estado = TRUE',
             [req.params.id]
         );
-        if (result.rows.length === 0) {
+        if (rows.length === 0) {
             return res.status(404).json({ error: 'Sensor no encontrado' });
         }
-        res.json(result.rows[0]);
+        res.json(rows[0]);
     } catch (err) {
         next(err);
     }
@@ -42,14 +43,15 @@ router.get('/:id', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
     try {
         const { tipo, valor_actual, ubicacion } = req.body;
-        const result = await pool.query(
-            'UPDATE sensores_externos SET tipo = $1, valor_actual = $2, ubicacion = $3, actualizado = CURRENT_TIMESTAMP WHERE id = $4 AND estado = TRUE RETURNING *',
+        const [result] = await pool.query(
+            'UPDATE sensores_externos SET tipo = ?, valor_actual = ?, ubicacion = ?, actualizado = CURRENT_TIMESTAMP WHERE id = ? AND estado = TRUE',
             [tipo, valor_actual, ubicacion, req.params.id]
         );
-        if (result.rows.length === 0) {
+        if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Sensor no encontrado' });
         }
-        res.json(result.rows[0]);
+        const [rows] = await pool.query('SELECT * FROM sensores_externos WHERE id = ?', [req.params.id]);
+        res.json(rows[0]);
     } catch (err) {
         next(err);
     }
@@ -57,11 +59,11 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
     try {
-        const result = await pool.query(
-            'UPDATE sensores_externos SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING *',
+        const [result] = await pool.query(
+            'UPDATE sensores_externos SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = ? AND estado = TRUE',
             [req.params.id]
         );
-        if (result.rows.length === 0) {
+        if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Sensor no encontrado' });
         }
         res.json({ message: 'Sensor eliminado' });

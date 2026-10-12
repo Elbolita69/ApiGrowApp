@@ -1,36 +1,40 @@
--- Smart Greenhouse Auxiliary Database Schema (PostgreSQL)
--- Usar las mismas tablas de la base de datos principal o crear tablas adicionales
+-- Smart Greenhouse Auxiliary Database Schema (MySQL)
+-- Base de datos auxiliar con 3 tablas minimo
+
+CREATE DATABASE IF NOT EXISTS greenhouse_aux;
+USE greenhouse_aux;
 
 -- Tabla: sensores_externos
 CREATE TABLE IF NOT EXISTS sensores_externos (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     tipo VARCHAR(100) NOT NULL,
-    valor_actual NUMERIC(10, 2),
+    valor_actual DECIMAL(10, 2),
     ubicacion VARCHAR(255),
     estado BOOLEAN DEFAULT TRUE,
     creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Tabla: lecturas_externas
 CREATE TABLE IF NOT EXISTS lecturas_externas (
-    id SERIAL PRIMARY KEY,
-    sensor_id INTEGER REFERENCES sensores_externos(id) ON DELETE CASCADE,
-    valor NUMERIC(10, 2) NOT NULL,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sensor_id INT,
+    valor DECIMAL(10, 2) NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     estado BOOLEAN DEFAULT TRUE,
     creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (sensor_id) REFERENCES sensores_externos(id) ON DELETE CASCADE
 );
 
 -- Tabla: alertas_externas
 CREATE TABLE IF NOT EXISTS alertas_externas (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     mensaje TEXT NOT NULL,
     prioridad VARCHAR(20) DEFAULT 'media',
     estado BOOLEAN DEFAULT TRUE,
     creado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Seed data inicial
