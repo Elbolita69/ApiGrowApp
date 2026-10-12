@@ -1,7 +1,3 @@
--- Smart Greenhouse Auxiliary Database Schema (MySQL)
--- Base de datos auxiliar con 3 tablas minimo
-
--- Tabla: sensores_externos
 CREATE TABLE IF NOT EXISTS sensores_externos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tipo VARCHAR(100) NOT NULL,
@@ -12,7 +8,6 @@ CREATE TABLE IF NOT EXISTS sensores_externos (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Tabla: lecturas_externas
 CREATE TABLE IF NOT EXISTS lecturas_externas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     sensor_id INT,
@@ -24,7 +19,6 @@ CREATE TABLE IF NOT EXISTS lecturas_externas (
     FOREIGN KEY (sensor_id) REFERENCES sensores_externos(id) ON DELETE CASCADE
 );
 
--- Tabla: alertas_externas
 CREATE TABLE IF NOT EXISTS alertas_externas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     mensaje TEXT NOT NULL,
@@ -34,7 +28,6 @@ CREATE TABLE IF NOT EXISTS alertas_externas (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Seed data inicial
 INSERT INTO sensores_externos (tipo, valor_actual, ubicacion) VALUES
 ('temperatura', 25.50, 'Externo Norte'),
 ('humedad', 65.00, 'Externo Sur');
