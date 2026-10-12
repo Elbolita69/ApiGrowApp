@@ -159,21 +159,137 @@ El sistema implementa control de acceso basado en roles:
 
 ## Endpoints Principales (FastAPI)
 
-| Prefijo | Descripcion |
-|---------|-------------|
-| /auth | Autenticacion (login, register, me) |
-| /greenhouses | Gestion de invernaderos |
-| /sensors | Gestion de sensores |
-| /sensor-readings | Lecturas de sensores |
-| /crops | Catalogo de cultivos |
-| /crop-batches | Lotes de cultivos |
-| /users | Gestion de usuarios |
-| /alerts | Alertas del sistema |
-| /irrigation-zones | Zonas de riego |
-| /irrigation-logs | Historial de riego |
-| /actuators | Actuadores |
-| /actuator-controls | Control de actuadores |
-| /greenhouse-settings | Configuraciones |
+### Auth
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| POST | /auth/login | Iniciar sesion |
+| POST | /auth/register | Registrar usuario |
+| GET | /auth/me | Obtener usuario actual |
+
+### Greenhouses
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /greenhouses | Listar invernaderos |
+| GET | /greenhouses/{greenhouse_id} | Obtener invernadero |
+| POST | /greenhouses | Crear invernadero |
+| PUT | /greenhouses/{greenhouse_id} | Actualizar invernadero |
+| DELETE | /greenhouses/{greenhouse_id} | Eliminar invernadero |
+
+### Sensors
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /sensors | Listar sensores |
+| GET | /sensors/{sensor_id} | Obtener sensor |
+| GET | /sensors/greenhouse/{greenhouse_id} | Sensores por invernadero |
+| POST | /sensors | Crear sensor |
+| PUT | /sensors/{sensor_id} | Actualizar sensor |
+| DELETE | /sensors/{sensor_id} | Eliminar sensor |
+
+### Sensor Readings
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /sensor-readings | Listar lecturas |
+| GET | /sensor-readings/{reading_id} | Obtener lectura |
+| GET | /sensor-readings/sensor/{sensor_id} | Lecturas por sensor |
+| GET | /sensor-readings/greenhouse/{greenhouse_id}/latest | Ultima lectura por invernadero |
+| POST | /sensor-readings | Crear lectura |
+
+### Crops
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /crops | Listar cultivos |
+| GET | /crops/{crop_id} | Obtener cultivo |
+| POST | /crops | Crear cultivo |
+| PUT | /crops/{crop_id} | Actualizar cultivo |
+| DELETE | /crops/{crop_id} | Eliminar cultivo |
+
+### Crop Batches
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /crop-batches | Listar lotes |
+| GET | /crop-batches/{batch_id} | Obtener lote |
+| GET | /crop-batches/greenhouse/{greenhouse_id} | Lotes por invernadero |
+| POST | /crop-batches | Crear lote |
+| PUT | /crop-batches/{batch_id} | Actualizar lote |
+| DELETE | /crop-batches/{batch_id} | Eliminar lote |
+
+### Users
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /users | Listar usuarios |
+| GET | /users/{user_id} | Obtener usuario |
+| GET | /users/username/{username} | Obtener por username |
+| POST | /users | Crear usuario |
+| PUT | /users/{user_id} | Actualizar usuario |
+| DELETE | /users/{user_id} | Eliminar usuario |
+
+### Alerts
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /alerts | Listar alertas |
+| GET | /alerts/activas | Alertas activas |
+| GET | /alerts/{alert_id} | Obtener alerta |
+| POST | /alerts | Crear alerta |
+| PATCH | /alerts/{alert_id}/resolver | Resolver alerta |
+| PATCH | /alerts/{alert_id}/reconocer | Reconocer alerta |
+
+### Irrigation Zones
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /irrigation-zones | Listar zonas |
+| GET | /irrigation-zones/{zone_id} | Obtener zona |
+| GET | /irrigation-zones/greenhouse/{greenhouse_id} | Zonas por invernadero |
+| POST | /irrigation-zones | Crear zona |
+| PUT | /irrigation-zones/{zone_id} | Actualizar zona |
+| DELETE | /irrigation-zones/{zone_id} | Eliminar zona |
+
+### Irrigation Logs
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /irrigation-logs | Listar registros |
+| GET | /irrigation-logs/{log_id} | Obtener registro |
+| GET | /irrigation-logs/zone/{zone_id} | Registros por zona |
+| POST | /irrigation-logs | Crear registro |
+
+### Actuators
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /actuators | Listar actuadores |
+| GET | /actuators/{actuator_id} | Obtener actuador |
+| GET | /actuators/greenhouse/{greenhouse_id} | Actuadores por invernadero |
+| POST | /actuators | Crear actuador |
+| PUT | /actuators/{actuator_id} | Actualizar actuador |
+| DELETE | /actuators/{actuator_id} | Eliminar actuador |
+
+### Actuator Controls
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /actuator-controls | Listar controles |
+| GET | /actuator-controls/{control_id} | Obtener control |
+| GET | /actuator-controls/actuator/{actuator_id} | Controles por actuador |
+| POST | /actuator-controls | Crear control |
+
+### Greenhouse Settings
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | /greenhouse-settings | Listar configuraciones |
+| GET | /greenhouse-settings/{setting_id} | Obtener configuracion |
+| GET | /greenhouse-settings/greenhouse/{greenhouse_id} | Config por invernadero |
+| POST | /greenhouse-settings | Crear configuracion |
+| PUT | /greenhouse-settings/greenhouse/{greenhouse_id} | Actualizar configuracion |
 
 ## Endpoints Auxiliares (Express)
 
