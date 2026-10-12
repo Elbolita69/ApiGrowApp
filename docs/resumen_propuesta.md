@@ -1,14 +1,14 @@
-# Resumen de Propuesta: Sistema de Gestion de Invernaderos Inteligentes
+# Resumen de Propuesta: Sistema de Gestion de Jardines y Cultivos Inteligentes
 
 ## 1. Problema
 
-Los invernaderos requieren un monitoreo constante de multiples variables ambientales como temperatura, humedad, luz y niveles de CO2 para garantizar condiciones optimas de cultivo. La gestion manual de estos parametros es propensa a errores humanos, consume tiempo valioso del personal agricola y dificulta la toma de decisiones basada en datos en tiempo real.
+Los jardines y areas de cultivo requieren un monitoreo constante de multiples variables ambientales como temperatura, humedad, luz y niveles de CO2 para garantizar condiciones optimas de cultivo. La gestion manual de estos parametros es propensa a errores humanos, consume tiempo valioso del personal agricola y dificulta la toma de decisiones basada en datos en tiempo real.
 
 La ausencia de un sistema centralizado que correlacione datos de multiples sensores limita la capacidad de los agricultores para identificar patrones, predecir problemas y optimizar el rendimiento de sus cultivos de manera cientifica.
 
 ## 2. Poblacion Objetivo
 
-Esta solucion esta disenada para agricultores y operadores de invernaderos que buscan modernizar sus operaciones agricolas mediante tecnologia de monitoreo automatizado. Tambien esta orientada a empresas agricolas de pequeno y mediano tamano que necesitan herramientas accesibles para gestionar sus cultivos de manera mas eficiente.
+Esta solucion esta disenada para agricultores y operadores de jardines y areas de cultivo que buscan modernizar sus operaciones agricolas mediante tecnologia de monitoreo automatizado. Tambien esta orientada a empresas agricolas de pequeno y mediano tamano que necesitan herramientas accesibles para gestionar sus cultivos de manera mas eficiente.
 
 Cualquier persona o entidad involucrada en la agricultura de ambiente controlado puede beneficiarse de este sistema para mejorar la productividad y reducir perdidas.
 

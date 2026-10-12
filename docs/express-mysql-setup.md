@@ -1,6 +1,6 @@
-# Guia de Despliegue: API Express con MySQL (Railway)
+# Guia de Despliegue: API Auxiliar Express con MySQL (Railway)
 
-Este documento describe paso a paso como se configuro la API Auxiliar Express con MySQL en Railway.
+Este documento describe paso a paso como se configuro la API Auxiliar Express con MySQL en Railway para el proyecto Grow A Garden.
 
 ---
 

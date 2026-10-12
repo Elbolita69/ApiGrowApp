@@ -1,6 +1,6 @@
-# Smart Greenhouse API
+# Grow A Garden API
 
-API REST para la gestion de invernaderos inteligentes con FastAPI y PostgreSQL.
+API REST para la gestion de jardines y cultivos inteligentes con FastAPI y PostgreSQL.
 
 ## Autores
 
@@ -9,8 +9,8 @@ API REST para la gestion de invernaderos inteligentes con FastAPI y PostgreSQL.
 
 ## URLs Desplegadas
 
-- **API FastAPI:** https://apigrowapp.onrender.com
-- **Express API:** https://apigrowappexpress.onrender.com
+- **API Principal:** https://apigrowapp.onrender.com
+- **API Auxiliar:** https://apigrowappexpress.onrender.com
 - **Web Dashboard:** https://webpage-56vp.onrender.com
 
 ## Estructura del Proyecto
@@ -45,7 +45,7 @@ api2026/
 │   │   ├── routes/
 │   │   │   ├── sensores.js       # /sensores-externos
 │   │   │   ├── lecturas.js       # /lecturas-externas
-│   │   │   └── alertas.js        # /alertas-externas
+│   │   │   └── alertas.js       # /alertas-externas
 │   │   └── middleware/
 │   │       └── errorHandler.js
 │   └── schema.sql                # MySQL schema
@@ -60,7 +60,7 @@ api2026/
 
 ### API Principal (FastAPI + PostgreSQL)
 
-La API principal esta construida con FastAPI y se conecta a una base de datos PostgreSQL hospedada en Neon. Esta API maneja toda la logica de negocio relacionada con la gestion de invernaderos, sensores, cultivos, alertas y actuadores.
+La API principal esta construida con FastAPI y se conecta a una base de datos PostgreSQL hospedada en Neon. Esta API maneja toda la logica de negocio relacionada con la gestion de areas de cultivo, sensores, cultivos, alertas y actuadores.
 
 **Tecnologias:**
 - FastAPI (Python 3.11+)
@@ -84,7 +84,7 @@ La API auxiliar esta construida con Express.js y se conecta a una base de datos 
 
 ### Dashboard Web
 
-Interfaz de usuario construida con JavaScript vanilla y CSS. Se comunica con la API FastAPI para mostrar y gestionar los datos del sistema.
+Interfaz de usuario construida con JavaScript vanilla y CSS. Se comunica con la API principal para mostrar y gestionar los datos del sistema.
 
 ## Base de Datos Principal (PostgreSQL - Neon)
 
@@ -92,7 +92,7 @@ Interfaz de usuario construida con JavaScript vanilla y CSS. Se comunica con la 
 
 | Tabla | Descripcion |
 |-------|-------------|
-| greenhouses | Invernaderos del sistema |
+| greenhouses | Areas de cultivo del sistema |
 | sensors | Sensores de monitoreo |
 | sensor_readings | Lecturas de sensores |
 | crops | Catalogo de cultivos |
@@ -102,7 +102,7 @@ Interfaz de usuario construida con JavaScript vanilla y CSS. Se comunica con la 
 | irrigation_logs | Historial de riego |
 | actuators | Actuadores |
 | actuator_controls | Control de actuadores |
-| greenhouse_settings | Configuraciones de invernadero |
+| greenhouse_settings | Configuraciones de area de cultivo |
 | sensores_externos | Sensores externos |
 | lecturas_externas | Lecturas externas |
 | alertas_externas | Alertas externas |
@@ -140,7 +140,7 @@ Todas las tablas incluyen los campos obligatorios: estado, creado, actualizado.
 
 ### JWT (API Principal)
 
-El sistema de autenticacion de la API FastAPI utiliza JWT (JSON Web Tokens):
+El sistema de autenticacion de la API principal utiliza JWT (JSON Web Tokens):
 
 - Algoritmo: HS256
 - Tiempo de expiracion: 24 horas
@@ -171,11 +171,11 @@ El sistema implementa control de acceso basado en roles:
 
 | Metodo | Ruta | Descripcion |
 |--------|------|-------------|
-| GET | /greenhouses | Listar invernaderos |
-| GET | /greenhouses/{greenhouse_id} | Obtener invernadero |
-| POST | /greenhouses | Crear invernadero |
-| PUT | /greenhouses/{greenhouse_id} | Actualizar invernadero |
-| DELETE | /greenhouses/{greenhouse_id} | Eliminar invernadero |
+| GET | /greenhouses | Listar areas de cultivo |
+| GET | /greenhouses/{greenhouse_id} | Obtener area de cultivo |
+| POST | /greenhouses | Crear area de cultivo |
+| PUT | /greenhouses/{greenhouse_id} | Actualizar area de cultivo |
+| DELETE | /greenhouses/{greenhouse_id} | Eliminar area de cultivo |
 
 ### Sensors
 
@@ -183,7 +183,7 @@ El sistema implementa control de acceso basado en roles:
 |--------|------|-------------|
 | GET | /sensors | Listar sensores |
 | GET | /sensors/{sensor_id} | Obtener sensor |
-| GET | /sensors/greenhouse/{greenhouse_id} | Sensores por invernadero |
+| GET | /sensors/greenhouse/{greenhouse_id} | Sensores por area de cultivo |
 | POST | /sensors | Crear sensor |
 | PUT | /sensors/{sensor_id} | Actualizar sensor |
 | DELETE | /sensors/{sensor_id} | Eliminar sensor |
@@ -195,7 +195,7 @@ El sistema implementa control de acceso basado en roles:
 | GET | /sensor-readings | Listar lecturas |
 | GET | /sensor-readings/{reading_id} | Obtener lectura |
 | GET | /sensor-readings/sensor/{sensor_id} | Lecturas por sensor |
-| GET | /sensor-readings/greenhouse/{greenhouse_id}/latest | Ultima lectura por invernadero |
+| GET | /sensor-readings/greenhouse/{greenhouse_id}/latest | Ultima lectura por area de cultivo |
 | POST | /sensor-readings | Crear lectura |
 
 ### Crops
@@ -214,7 +214,7 @@ El sistema implementa control de acceso basado en roles:
 |--------|------|-------------|
 | GET | /crop-batches | Listar lotes |
 | GET | /crop-batches/{batch_id} | Obtener lote |
-| GET | /crop-batches/greenhouse/{greenhouse_id} | Lotes por invernadero |
+| GET | /crop-batches/greenhouse/{greenhouse_id} | Lotes por area de cultivo |
 | POST | /crop-batches | Crear lote |
 | PUT | /crop-batches/{batch_id} | Actualizar lote |
 | DELETE | /crop-batches/{batch_id} | Eliminar lote |
@@ -247,7 +247,7 @@ El sistema implementa control de acceso basado en roles:
 |--------|------|-------------|
 | GET | /irrigation-zones | Listar zonas |
 | GET | /irrigation-zones/{zone_id} | Obtener zona |
-| GET | /irrigation-zones/greenhouse/{greenhouse_id} | Zonas por invernadero |
+| GET | /irrigation-zones/greenhouse/{greenhouse_id} | Zonas por area de cultivo |
 | POST | /irrigation-zones | Crear zona |
 | PUT | /irrigation-zones/{zone_id} | Actualizar zona |
 | DELETE | /irrigation-zones/{zone_id} | Eliminar zona |
@@ -267,7 +267,7 @@ El sistema implementa control de acceso basado en roles:
 |--------|------|-------------|
 | GET | /actuators | Listar actuadores |
 | GET | /actuators/{actuator_id} | Obtener actuador |
-| GET | /actuators/greenhouse/{greenhouse_id} | Actuadores por invernadero |
+| GET | /actuators/greenhouse/{greenhouse_id} | Actuadores por area de cultivo |
 | POST | /actuators | Crear actuador |
 | PUT | /actuators/{actuator_id} | Actualizar actuador |
 | DELETE | /actuators/{actuator_id} | Eliminar actuador |
@@ -287,7 +287,7 @@ El sistema implementa control de acceso basado en roles:
 |--------|------|-------------|
 | GET | /greenhouse-settings | Listar configuraciones |
 | GET | /greenhouse-settings/{setting_id} | Obtener configuracion |
-| GET | /greenhouse-settings/greenhouse/{greenhouse_id} | Config por invernadero |
+| GET | /greenhouse-settings/greenhouse/{greenhouse_id} | Config por area de cultivo |
 | POST | /greenhouse-settings | Crear configuracion |
 | PUT | /greenhouse-settings/greenhouse/{greenhouse_id} | Actualizar configuracion |
 
@@ -314,8 +314,8 @@ El sistema implementa control de acceso basado en roles:
 ### Render.com
 
 Ambos servicios API estan desplegados en Render.com:
-- API FastAPI: Servicio web con Uvicorn
-- API Express: Servicio web con Node.js
+- API Principal: Servicio web con Uvicorn
+- API Auxiliar: Servicio web con Node.js
 
 ### Railway.app
 
@@ -323,10 +323,10 @@ La base de datos MySQL esta hospedada en Railway con conexion publica habilitada
 
 ### Variables de Entorno
 
-**API FastAPI:**
+**API Principal:**
 - DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT
 
-**API Express:**
+**API Auxiliar:**
 - MYSQL_URL: mysql://root:password@turntable.proxy.rlwy.net:59812/railway
 - PORT: 3000
 
