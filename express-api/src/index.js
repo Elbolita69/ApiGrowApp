@@ -10,6 +10,13 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Express API - Smart Greenhouse Aux',
+        endpoints: ['/health', '/sensores-externos', '/lecturas-externas', '/alertas-externas']
+    });
+});
+
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
 });
