@@ -1,9 +1,6 @@
 -- Smart Greenhouse Auxiliary Database Schema (MySQL)
 -- Base de datos auxiliar con 3 tablas minimo
 
-CREATE DATABASE IF NOT EXISTS greenhouse_aux;
-USE greenhouse_aux;
-
 -- Tabla: sensores_externos
 CREATE TABLE IF NOT EXISTS sensores_externos (
     id INT AUTO_INCREMENT PRIMARY KEY,
