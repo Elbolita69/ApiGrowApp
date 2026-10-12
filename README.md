@@ -2,6 +2,47 @@
 
 API REST para la gestion de jardines y cultivos inteligentes con FastAPI y PostgreSQL.
 
+## Tabla de Contenidos
+
+1. [Autores](#autores)
+2. [URLs Desplegadas](#urls-desplegadas)
+3. [Estructura del Proyecto](#estructura-del-proyecto)
+4. [Arquitectura](#arquitectura)
+   - [API Principal (FastAPI + PostgreSQL)](#api-principal-fastapi--postgresql)
+   - [API Auxiliar (Express + MySQL)](#api-auxiliar-express--mysql)
+   - [Dashboard Web](#dashboard-web)
+5. [Base de Datos Principal (PostgreSQL - Neon)](#base-de-datos-principal-postgresql---neon)
+   - [Tablas de Negocio (14 tablas)](#tablas-de-negocio-14-tablas)
+   - [Tablas RBAC (4 tablas)](#tablas-rbac-4-tablas)
+   - [Campos Obligatorios](#campos-obligatorios-en-todas-las-tablas)
+6. [Base de Datos Auxiliar (MySQL - Railway)](#base-de-datos-auxiliar-mysql---railway)
+   - [Tablas (3 tablas)](#tablas-3-tablas)
+7. [Autenticacion y Autorizacion](#autenticacion-y-autorizacion)
+   - [JWT (API Principal)](#jwt-api-principal)
+   - [Permisos RBAC](#permisos-rbac)
+8. [Endpoints Principales (FastAPI)](#endpoints-principales-fastapi)
+   - [Auth](#auth)
+   - [Greenhouses](#greenhouses)
+   - [Sensors](#sensors)
+   - [Sensor Readings](#sensor-readings)
+   - [Crops](#crops)
+   - [Crop Batches](#crop-batches)
+   - [Users](#users)
+   - [Alerts](#alerts)
+   - [Irrigation Zones](#irrigation-zones)
+   - [Irrigation Logs](#irrigation-logs)
+   - [Actuators](#actuators)
+   - [Actuator Controls](#actuator-controls)
+   - [Greenhouse Settings](#greenhouse-settings)
+9. [Endpoints Auxiliares (Express)](#endpoints-auxiliares-express)
+10. [Despliegue](#despliegue)
+    - [Render.com](#rendercom)
+    - [Railway.app](#railwayapp)
+    - [Variables de Entorno](#variables-de-entorno)
+11. [Tech Stack](#tech-stack)
+
+---
+
 ## Autores
 
 - Esteban Gomez Jimenez
@@ -323,12 +364,18 @@ La base de datos MySQL esta hospedada en Railway con conexion publica habilitada
 
 ### Variables de Entorno
 
-**API Principal:**
-- DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, DB_PORT
+**API Principal (Neon PostgreSQL):**
+- DB_HOST
+- DB_NAME
+- DB_USER
+- DB_PASSWORD
+- DB_PORT
 
-**API Auxiliar:**
-- MYSQL_URL: mysql://root:password@turntable.proxy.rlwy.net:59812/railway
+**API Auxiliar (Railway MySQL):**
+- MYSQL_URL: mysql://root:password@host:puerto/database
 - PORT: 3000
+
+**Nota:** Las credenciales reales se configuran en los servicios de despliegue y no se almacenan en el repositorio.
 
 ## Tech Stack
 
