@@ -47,6 +47,7 @@ API REST para la gestion de jardines y cultivos inteligentes con FastAPI y Postg
 
 - Esteban Gomez Jimenez
 - Victor Daniel Amaranto Garizabalo
+- Jose Muñoz Perez
 
 ## URLs Desplegadas
 
