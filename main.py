@@ -41,7 +41,7 @@ app.include_router(rutas_auth)
 async def root():
     return {
         "mensaje": "Invernadero Inteligente API",
-        "version": "1.0.0",
+        "version": "1.0",
         "documentacion": "/docs"
     }
 
