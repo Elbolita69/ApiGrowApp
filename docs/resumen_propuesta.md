@@ -49,6 +49,7 @@ Cualquier persona o entidad involucrada en la agricultura de ambiente controlado
 
 - Esteban Gomez Jimenez
 - Victor Daniel Amaranto Garizabalo
+- Jose Muñoz Perez
 
 ## 6. Fecha
 

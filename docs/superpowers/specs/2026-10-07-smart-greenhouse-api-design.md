@@ -3,7 +3,7 @@
 ## 1. Resumen del Proyecto
 
 **Nombre:** Smart Greenhouse API  
-**Autores:** Esteban Gomez Jimenez, Victor Daniel Amaranto Garizabalo  
+**Autores:** Esteban Gomez Jimenez, Victor Daniel Amaranto Garizabalo, Jose Muñoz Perez  
 **Fecha:** 2026-10-07  
 **Descripción:** Sistema de gestión de invernaderos inteligentes con API principal FastAPI/PostgreSQL y API auxiliar Express/MySQL.
 

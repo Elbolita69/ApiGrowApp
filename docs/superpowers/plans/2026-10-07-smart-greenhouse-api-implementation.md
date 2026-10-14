@@ -743,6 +743,7 @@ Agricultores y operadores de invernaderos que necesitan:
 
 - Esteban Gomez Jimenez
 - Victor Daniel Amaranto Garizabalo
+- Jose Muñoz Perez
 
 ## Fecha
 
