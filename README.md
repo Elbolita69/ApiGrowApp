@@ -1,45 +1,25 @@
-# Grow A Garden API
+# GrowApp - Invernadero Inteligente
 
-API REST para la gestion de jardines y cultivos inteligentes con FastAPI y PostgreSQL.
+API REST y panel web para la gestion de invernaderos inteligentes (cultivos, sensores, riego, actuadores y alertas) con **FastAPI + PostgreSQL (Neon)** y **SvelteKit**.
+
+> Este proyecto fue migrado desde macOS y esta verificado para ejecutarse en **Windows 10/11**. No hay scripts de bash ni rutas tipo `/Users/...`: todos los comandos son multiplataforma y se ejecutan con `python -m ...` y `npm run ...`.
 
 ## Tabla de Contenidos
 
 1. [Autores](#autores)
-2. [URLs Desplegadas](#urls-desplegadas)
-3. [Estructura del Proyecto](#estructura-del-proyecto)
-4. [Arquitectura](#arquitectura)
-   - [API Principal (FastAPI + PostgreSQL)](#api-principal-fastapi--postgresql)
-   - [API Auxiliar (Express + MySQL)](#api-auxiliar-express--mysql)
-   - [Dashboard Web](#dashboard-web)
-5. [Base de Datos Principal (PostgreSQL - Neon)](#base-de-datos-principal-postgresql---neon)
-   - [Tablas de Negocio (14 tablas)](#tablas-de-negocio-11-tablas)
-   - [Tablas RBAC (4 tablas)](#tablas-rbac-4-tablas)
-   - [Campos Obligatorios](#campos-obligatorios-en-todas-las-tablas)
-6. [Base de Datos Auxiliar (MySQL - Railway)](#base-de-datos-auxiliar-mysql---railway)
-   - [Tablas (3 tablas)](#tablas-3-tablas)
-7. [Autenticacion y Autorizacion](#autenticacion-y-autorizacion)
-   - [JWT (API Principal)](#jwt-api-principal)
-   - [Permisos RBAC](#permisos-rbac)
-8. [Endpoints Principales (FastAPI)](#endpoints-principales-fastapi)
-   - [Auth](#auth)
-   - [Greenhouses](#greenhouses)
-   - [Sensors](#sensors)
-   - [Sensor Readings](#sensor-readings)
-   - [Crops](#crops)
-   - [Crop Batches](#crop-batches)
-   - [Users](#users)
-   - [Alerts](#alerts)
-   - [Irrigation Zones](#irrigation-zones)
-   - [Irrigation Logs](#irrigation-logs)
-   - [Actuators](#actuators)
-   - [Actuator Controls](#actuator-controls)
-   - [Greenhouse Settings](#greenhouse-settings)
-9. [Endpoints Auxiliares (Express)](#endpoints-auxiliares-express)
-10. [Despliegue](#despliegue)
-    - [Render.com](#rendercom)
-    - [Railway.app](#railwayapp)
-    - [Variables de Entorno](#variables-de-entorno)
-11. [Tech Stack](#tech-stack)
+2. [Requisitos previos](#requisitos-previos)
+3. [Instalacion paso a paso en Windows](#instalacion-paso-a-paso-en-windows)
+4. [Estructura del proyecto](#estructura-del-proyecto)
+5. [Arquitectura](#arquitectura)
+6. [Base de datos principal (PostgreSQL - Neon)](#base-de-datos-principal-postgresql---neon)
+7. [Base de datos auxiliar (MySQL - Railway)](#base-de-datos-auxiliar-mysql---railway)
+8. [Autenticacion, JWT y permisos por rol](#autenticacion-jwt-y-permisos-por-rol)
+9. [Endpoints de la API](#endpoints-de-la-api)
+10. [Asistente de consultas en lenguaje natural](#asistente-de-consultas-en-lenguaje-natural)
+11. [Frontend SvelteKit](#frontend-sveltekit)
+12. [Pruebas](#pruebas)
+13. [Despliegue](#despliegue)
+14. [Reglas de negocio implementadas](#reglas-de-negocio-implementadas)
 
 ---
 
@@ -49,389 +29,462 @@ API REST para la gestion de jardines y cultivos inteligentes con FastAPI y Postg
 - Victor Daniel Amaranto Garizabalo
 - Jose Muñoz Perez
 
-## URLs Desplegadas
+---
 
-- **API Principal:** https://apigrowapp.onrender.com
-- **API Auxiliar:** https://apigrowappexpress.onrender.com
-- **Web Dashboard (anterior):** https://webpage-56vp.onrender.com
-- **Frontend Svelte:** (completar con la URL de Render al desplegar)
+## Requisitos previos
 
-## Estructura del Proyecto
+| Herramienta | Version | Nota |
+|---|---|---|
+| Python | 3.11 o superior | `python --version`. En Windows marca "Add python.exe to PATH" al instalar. |
+| Node.js | 20 o superior | `node --version`. |
+| PostgreSQL | 15 o superior | Solo si usas una base local; en la nube usas Neon. |
+| MySQL / MariaDB | 8 o superior | Solo para la API auxiliar. |
+
+---
+
+## Instalacion paso a paso en Windows
+
+### 1. Obtener el proyecto
+
+Abre **PowerShell** en la carpeta del proyecto:
+
+```powershell
+cd "C:\Users\duvan\OneDrive\Escritorio\Nueva carpeta\ApiGrowApp-main"
+```
+
+### 2. Crear el entorno virtual de Python
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+Si PowerShell bloquea la activacion por politica de ejecucion:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
+Alternativa sin activar el entorno, usando el ejecutable directamente:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+> **No uses `python3`**: en Windows el comando es `python`. Y no uses `source .venv/bin/activate` (eso es de macOS/Linux); en Windows es `.\.venv\Scripts\Activate.ps1`.
+
+### 3. Configurar las variables de entorno
+
+```powershell
+copy .env.example .env
+```
+
+Edita `.env` con tus credenciales de Neon:
 
 ```
-api2026/
-├── app/                          # FastAPI Application (API Principal)
-│   ├── api/                      # Route handlers
+DB_HOST=ep-xxxxxxxx.us-east-2.aws.neon.tech
+DB_PORT=5432
+DB_NAME=growapp
+DB_USER=tu_usuario
+DB_PASSWORD=tu_password
+DB_SSL=true
+SECRET_KEY=una-clave-larga-y-aleatoria
+CORS_ORIGINS=http://localhost:5173
+```
+
+Y en `frontend/`:
+
+```powershell
+cd frontend
+copy .env.example .env
+cd ..
+```
+
+### 4. Instalar las dependencias del frontend
+
+```powershell
+cd frontend
+npm install
+cd ..
+```
+
+> El proyecto no incluye `node_modules`: se instala en tu equipo para que los binarios nativos correspondan a tu sistema (Windows), no a macOS.
+
+### 5. Cargar la base de datos
+
+Ejecuta `schema.sql` completo en tu base de datos (Neon o local). El archivo es idempotente: empieza con `DROP TABLE IF EXISTS ... CASCADE` y recrea todo con datos de prueba.
+
+En Neon, abre el **SQL Editor**, pega el contenido de `schema.sql` y ejecuta.
+
+En una base local con `psql` en el PATH:
+
+```powershell
+psql -h localhost -U postgres -d growapp -f schema.sql
+```
+
+### 6. Levantar la API
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+O con el script incluido:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\iniciar_api.ps1
+```
+
+Verifica en el navegador: <http://localhost:8000/docs> (documentacion interactiva) y <http://localhost:8000/health>.
+
+### 7. Levantar el frontend
+
+En otra terminal:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Abre <http://localhost:5173>.
+
+### 8. (Opcional) Levantar la API auxiliar
+
+```powershell
+cd express-api
+copy .env.example .env
+npm install
+npm start
+```
+
+### Scripts de ayuda
+
+En `scripts/` hay tareas para Windows que evitan repetir comandos a mano:
+
+| Script | Que hace |
+|---|---|
+| `scripts\instalar_dependencias.ps1` | Crea `.venv`, instala Python, `npm install` del frontend y de `express-api`. |
+| `scripts\iniciar_api.ps1` / `.bat` | Levanta la API en el puerto 8000 con recarga. |
+| `scripts\iniciar_frontend.ps1` / `.bat` | Levanta el frontend en el puerto 5173. |
+| `scripts\iniciar_api_express.ps1` | Levanta la API auxiliar en el puerto 3000. |
+
+---
+
+## Estructura del proyecto
+
+```
+ApiGrowApp-main/
+├── app/                          # API principal (FastAPI)
+│   ├── api/                      # Routers (uno por modulo)
 │   │   ├── rutas_auth.py
 │   │   ├── rutas_greenhouse.py
 │   │   ├── rutas_sensor.py
 │   │   ├── rutas_sensor_reading.py
 │   │   ├── rutas_crop.py
 │   │   ├── rutas_crop_batch.py
+│   │   ├── alertas / riego / actuadores ...
 │   │   ├── rutas_user.py
-│   │   ├── rutas_alert.py
-│   │   ├── rutas_irrigation_zone.py
-│   │   ├── rutas_irrigation_log.py
-│   │   ├── rutas_actuator.py
-│   │   ├── rutas_actuator_control.py
-│   │   └── rutas_greenhouse_setting.py
+│   │   ├── rutas_rol.py
+│   │   ├── rutas_estudiante.py
+│   │   └── rutas_asistente.py
 │   ├── core/
-│   │   ├── auth.py               # JWT authentication
-│   │   └── database.py           # asyncpg connection pool
-│   ├── models/                   # Pydantic models
-│   └── repositories/             # Database access layer
-├── express-api/                  # Express.js API (API Auxiliar)
-│   ├── src/
-│   │   ├── index.js              # Entry point
-│   │   ├── config/
-│   │   │   └── database.js       # MySQL connection pool
-│   │   ├── routes/
-│   │   │   ├── sensores.js       # /sensores-externos
-│   │   │   ├── lecturas.js       # /lecturas-externas
-│   │   │   └── alertas.js       # /alertas-externas
-│   │   └── middleware/
-│   │       └── errorHandler.js
-│   └── schema.sql                # MySQL schema
-├── frontend/                     # Frontend SvelteKit (taller corte 2)
-├── docs/                         # Documentation
-├── main.py                       # FastAPI entry point
-├── schema.sql                    # PostgreSQL schema
-└── requirements.txt              # Python dependencies
+│   │   ├── auth.py               # JWT + permisos por rol (moduloxrol)
+│   │   ├── database.py           # Pool psycopg2 (ThreadedConnectionPool)
+│   │   └── asistente.py          # get_schema() / run_sql_query() / lenguaje natural
+│   ├── models/                   # Modelos Pydantic v2
+│   └── repositories/             # SQL puro con psycopg2 (sin ORM)
+├── express-api/                  # API auxiliar (Express + MySQL)
+├── frontend/                     # Frontend SvelteKit
+│   ├── svelte.config.js
+│   ├── vite.config.js            # Proxy /api -> http://localhost:8000
+│   └── src/
+│       ├── lib/
+│       │   ├── components/       # 16 componentes reutilizables
+│       │   ├── services/         # UNICA capa que hace fetch
+│       │   ├── config/modulos.js
+│       │   └── stores/
+│       └── routes/               # +layout.svelte / +page.svelte
+├── scripts/                      # .ps1 y .bat para Windows
+├── tests/                        # Pruebas con base de datos simulada
+├── main.py                       # Punto de entrada de FastAPI
+├── requirements.txt
+├── schema.sql                    # Esquema PostgreSQL + semillas
+└── odd/tasks/port-windows.md     # Especificacion y tareas del taller
 ```
+
+---
 
 ## Arquitectura
 
-### API Principal (FastAPI + PostgreSQL)
+### API principal (FastAPI + PostgreSQL)
 
-La API principal esta construida con FastAPI y se conecta a una base de datos PostgreSQL hospedada en Neon. Esta API maneja toda la logica de negocio relacionada con la gestion de areas de cultivo, sensores, cultivos, alertas y actuadores.
+**Tecnologias:** FastAPI, Python 3.11+, psycopg2 (SQL puro, sin ORM), Pydantic v2, python-jose (JWT), bcrypt, Uvicorn.
 
-**Tecnologias:**
-- FastAPI (Python 3.11+)
-- PostgreSQL (Neon)
-- asyncpg (conexion asincrona)
-- Pydantic v2 (validacion)
-- python-jose (JWT)
-- bcrypt (hash de contrasenas)
-- Uvicorn (servidor)
+Reglas de la estructura:
 
-### API Auxiliar (Express + MySQL)
+- `app/api/` contiene solo los routers (HTTP).
+- `app/core/` contiene la infraestructura: pool de base de datos, autenticacion y el asistente.
+- `app/models/` contiene los schemas de Pydantic: los de escritura **no aceptan `id`** porque el identificador lo asigna la base de datos.
+- `app/repositories/` contiene el SQL. Cada metodo es una consulta parametrizada (`%s`), nunca concatenacion de cadenas.
 
-La API auxiliar esta construida con Express.js y se conecta a una base de datos MySQL Hospedada en Railway. Esta API maneja sensores externos, lecturas externas y alertas externas.
+Como `psycopg2` es sincrono, los handlers se declaran con `def` (no `async def`): FastAPI los ejecuta en su threadpool y no bloquea el event loop.
 
-**Tecnologias:**
-- Express.js (Node.js)
-- MySQL (Railway)
-- mysql2 (driver)
-- CORS
-- dotenv
+### API auxiliar (Express + MySQL)
 
-### Frontend (Svelte)
+Express.js con `mysql2` para los datos meteorologicos externos (sensores, lecturas y alertas externas). Es independiente de la API principal y opcional.
 
-Ver la seccion **Frontend Svelte** al final de este documento.
+### Frontend (SvelteKit)
 
-### Dashboard Web (anterior)
+Svelte 5 en modo runes, `adapter-static` con `fallback: 'index.html'` (SPA), Bootstrap 5 por CDN, Bootstrap Icons y DataTables para todas las tablas.
 
-Interfaz de usuario construida con JavaScript vanilla y CSS. Se comunica con la API principal para mostrar y gestionar los datos del sistema.
+---
 
-## Base de Datos Principal (PostgreSQL - Neon)
+## Base de datos principal (PostgreSQL - Neon)
 
-### Tablas de Negocio (11 tablas)
+16 tablas. Todas incluyen los tres campos de auditoria:
 
-| Tabla | Descripcion |
-|-------|-------------|
-| greenhouses | Areas de cultivo del sistema |
-| sensors | Sensores de monitoreo |
-| sensor_readings | Lecturas de sensores |
-| crops | Catalogo de cultivos |
-| crop_batches | Lotes de cultivos |
-| alerts | Alertas del sistema |
-| irrigation_zones | Zonas de riego |
-| irrigation_logs | Historial de riego |
-| actuators | Actuadores |
-| actuator_controls | Control de actuadores |
-| greenhouse_settings | Configuraciones de area de cultivo |
+| Campo | Tipo | Proposito |
+|---|---|---|
+| `creado` | `TIMESTAMP` | Fecha y hora de creacion. |
+| `actualizado` | `TIMESTAMP` | Fecha y hora de la ultima modificacion (un trigger lo refresca en cada `UPDATE`). |
+| `estado` | `BOOLEAN` | Borrado **logico**: `TRUE` activo, `FALSE` eliminado. |
 
-### Tablas RBAC (4 tablas)
+**El borrado fisico esta prohibido**: la API nunca ejecuta `DELETE`; el "eliminar" hace `UPDATE ... SET estado = FALSE`.
+
+### Tablas de negocio (12)
 
 | Tabla | Descripcion |
-|-------|-------------|
-| rol | Roles del sistema (administrador, operador, agronomo) |
-| modulo | Modulos del sistema |
-| moduloxrol | Permisos por rol y modulo |
-| usuario | Usuarios del sistema |
+|---|---|
+| `greenhouses` | Invernaderos (areas de cultivo) |
+| `sensors` | Sensores de monitoreo |
+| `sensor_readings` | Lecturas de sensores |
+| `crops` | Catalogo de cultivos |
+| `crop_batches` | Lotes de cultivo |
+| `alerts` | Alertas del sistema |
+| `irrigation_zones` | Zonas de riego |
+| `irrigation_logs` | Historial de riego |
+| `actuators` | Actuadores (ventanas, ventiladores, bombas, luces) |
+| `actuator_controls` | Ordenes de control de actuadores |
+| `greenhouse_settings` | Parametros agronomicos por invernadero |
+| `estudiantes` | Estudiantes del programa (modulo CRUD del taller) |
 
-### Campos Obligatorios en Todas las Tablas
-
-Todas las tablas de la base de datos incluyen los siguientes campos de auditoria:
-
-- **estado**: BOOLEAN DEFAULT TRUE - Para eliminacion logica (soft delete)
-- **creado**: TIMESTAMP DEFAULT CURRENT_TIMESTAMP - Fecha de creacion del registro
-- **actualizado**: TIMESTAMP DEFAULT CURRENT_TIMESTAMP - Fecha de ultima modificacion
-
-## Base de Datos Auxiliar (MySQL - Railway)
-
-### Tablas (3 tablas)
+### Tablas de control de acceso (4)
 
 | Tabla | Descripcion |
-|-------|-------------|
-| sensores_externos | Sensores externos de monitoreo |
-| lecturas_externas | Lecturas de sensores externos |
-| alertas_externas | Alertas generadas por sensores externos |
+|---|---|
+| `rol` | Roles del sistema |
+| `modulo` | Modulos de la aplicacion |
+| `moduloxrol` | Permisos (ver/crear/editar/eliminar) por rol y modulo |
+| `usuario` | Usuarios con su rol |
 
-Todas las tablas incluyen los campos obligatorios: estado, creado, actualizado.
+### Datos iniciales
 
-## Autenticacion y Autorizacion
+- 20 registros en cada tabla de negocio.
+- 10 estudiantes, 10 roles, 16 modulos y la matriz completa de `moduloxrol`.
+- Los usuarios de prueba son:
 
-### JWT (API Principal)
+| Rol | Usuario | Contrasena |
+|---|---|---|
+| administrador | `admin` | `Admin123*` |
+| supervisor | `supervisor1`, `supervisor2` | `Supervisor123*` |
+| agronomo | `agronomo1` ... `agronomo4` | `Agronomo123*` |
+| regador | `regador1` ... `regador4` | `Regador123*` |
+| tecnico | `tecnico1` ... `tecnico3` | `Tecnico123*` |
+| lector | `lector1` ... `lector3` | `Lector123*` |
+| auxiliar_riego | `auxiliar_riego1` | `Auxiliar123*` |
+| planificador | `planificador1` | `Planificador123*` |
+| calidad | `calidad1` | `Calidad123*` |
+| mantenimiento | `mantenimiento1` | `Mantenimiento123*` |
 
-El sistema de autenticacion de la API principal utiliza JWT (JSON Web Tokens):
+> Cambia estas contrasenas antes de entregar el proyecto.
 
-- Algoritmo: HS256
-- Tiempo de expiracion: 24 horas
-- Almacenamiento: localStorage en el frontend
-- Encabezado: Authorization: Bearer <token>
-- Todas las rutas (excepto `/auth/login` y `/auth/register`) exigen un token valido y consultan la tabla `moduloxrol` para validar el permiso (ver/crear/editar/eliminar) del rol sobre el modulo
-- `SECRET_KEY` se lee de la variable de entorno del mismo nombre
-- `/auth/register` asigna siempre el rol `operador`
+---
 
-### Permisos RBAC
+## Base de datos auxiliar (MySQL - Railway)
 
-El sistema implementa control de acceso basado en roles:
+3 tablas: `sensores_externos`, `lecturas_externas`, `alertas_externas`, con los mismos campos de auditoria y borrado logico. Se cargan con `express-api/schema.sql`.
 
-| Rol | Permisos |
-|-----|----------|
-| administrador | CRUD completo en los 15 modulos (incluye usuarios) |
-| operador | CRUD de sensores, lecturas, actuadores, control de actuadores, zonas y historial de riego y sensores externos; ver invernaderos; ver y editar alertas |
-| agronomo | CRUD de cultivos, lotes, parametros del invernadero, alertas, lecturas externas y alertas externas; ver invernaderos, sensores y lecturas |
+---
 
-Cada rol hace CRUD sobre sus modulos. Los permisos viven en la tabla `moduloxrol` y el frontend arma el menu con `GET /auth/modulos`.
+## Autenticacion, JWT y permisos por rol
 
+### JWT
 
-## Endpoints Principales (FastAPI)
+- Algoritmo `HS256`, expiracion de 24 horas, clave en `SECRET_KEY`.
+- El token viaja en `Authorization: Bearer <token>` y se guarda en `localStorage`.
+- Claims: `sub` (id del usuario), `username`, `rol` (nombre del rol) y `exp`.
+
+### Permisos por rol
+
+Cada endpoint declara el permiso que exige:
+
+```python
+@router.get("/", dependencies=[Depends(require_permission("crops", "ver"))])
+```
+
+`require_permission` consulta `moduloxrol` uneindo `rol` y `modulo` **por nombre**, y exige que la columna `puede_ver` / `puede_crear` / `puede_editar` / `puede_eliminar` sea `TRUE` y que las tres tablas esten activas.
+
+Consecuencias:
+
+- El menu lateral del frontend se arma con `GET /auth/modulos`, asi que **cada rol ve solo los modulos permitidos**.
+- Un rol que intente saltarse el menu recibe igual `403` desde la API.
+- **Reflejo de procesos**: los modulos de negocio son visibles para varios roles, de modo que lo que registra un rol lo ven los demas (por ejemplo, el agronomo registra un cultivo y el regador lo consulta).
+
+---
+
+## Endpoints de la API
+
+Documentacion completa e interactiva en <http://localhost:8000/docs>.
 
 ### Auth
 
 | Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| POST | /auth/login | Iniciar sesion |
-| POST | /auth/register | Registrar usuario |
-| GET | /auth/me | Obtener usuario actual |
+|---|---|---|
+| POST | `/auth/login` | Iniciar sesion (devuelve el token) |
+| POST | `/auth/register` | Registrar usuario (siempre con rol `lector`) |
+| GET | `/auth/me` | Usuario autenticado |
+| GET | `/auth/modulos` | Modulos y permisos del rol |
 
-### Greenhouses
+### CRUD de negocio
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /greenhouses | Listar areas de cultivo |
-| GET | /greenhouses/{greenhouse_id} | Obtener area de cultivo |
-| POST | /greenhouses | Crear area de cultivo |
-| PUT | /greenhouses/{greenhouse_id} | Actualizar area de cultivo |
-| DELETE | /greenhouses/{greenhouse_id} | Eliminar area de cultivo |
+Todos siguen el mismo patron y filtran por `estado = TRUE`:
 
-### Sensors
+| Metodo | Ruta | Modulo |
+|---|---|---|
+| GET/POST | `/greenhouses` | Invernaderos |
+| GET/PUT/DELETE | `/greenhouses/{id}` | |
+| GET/POST | `/sensors` | Sensores |
+| GET/PUT/DELETE | `/sensors/{id}` | |
+| GET/POST | `/sensor-readings` | Lecturas |
+| GET/POST | `/crops` | Cultivos |
+| GET/PUT/DELETE | `/crops/{id}` | |
+| GET/POST | `/crop-batches` | Lotes de cultivo |
+| GET/PUT/DELETE | `/crop-batches/{id}` | |
+| GET/POST | `/alerts` | Alertas |
+| PATCH | `/alerts/{id}/resolver` | Resolver alerta |
+| GET/POST | `/irrigation-zones` | Zonas de riego |
+| GET/PUT/DELETE | `/irrigation-zones/{id}` | |
+| GET/POST | `/irrigation-logs` | Historial de riego |
+| GET/POST | `/actuators` | Actuadores |
+| GET/PUT/DELETE | `/actuators/{id}` | |
+| GET/POST | `/actuator-controls` | Control de actuadores |
+| GET/POST | `/greenhouse-settings` | Parametros por invernadero |
+| GET/POST | `/users` | Usuarios (CRUD completo solo para administrador) |
+| GET | `/roles` | Roles activos (desplegables) |
+| GET/POST | `/estudiantes` | Estudiantes del programa |
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /sensors | Listar sensores |
-| GET | /sensors/{sensor_id} | Obtener sensor |
-| GET | /sensors/greenhouse/{greenhouse_id} | Sensores por area de cultivo |
-| POST | /sensors | Crear sensor |
-| PUT | /sensors/{sensor_id} | Actualizar sensor |
-| DELETE | /sensors/{sensor_id} | Eliminar sensor |
+### API auxiliar (Express)
 
-### Sensor Readings
+`/sensores-externos`, `/lecturas-externas`, `/alertas-externas` en `http://localhost:3000`.
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /sensor-readings | Listar lecturas |
-| GET | /sensor-readings/{reading_id} | Obtener lectura |
-| GET | /sensor-readings/sensor/{sensor_id} | Lecturas por sensor |
-| GET | /sensor-readings/greenhouse/{greenhouse_id}/latest | Ultima lectura por area de cultivo |
-| POST | /sensor-readings | Crear lectura |
+---
 
-### Crops
+## Asistente de consultas en lenguaje natural
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /crops | Listar cultivos |
-| GET | /crops/{crop_id} | Obtener cultivo |
-| POST | /crops | Crear cultivo |
-| PUT | /crops/{crop_id} | Actualizar cultivo |
-| DELETE | /crops/{crop_id} | Eliminar cultivo |
+`app/core/asistente.py` implementa el asistente con dos funciones internas:
 
-### Crop Batches
+- `get_schema()`: lee `information_schema.columns` para conocer la estructura de la base de datos.
+- `run_sql_query(sql, params)`: ejecuta **solo** consultas `SELECT`, con validacion previa que rechaza cualquier sentencia con `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, `GRANT`, `COPY` o `;` seguido de otra sentencia, y bloquea el acceso a `pg_catalog` y `pg_*`.
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /crop-batches | Listar lotes |
-| GET | /crop-batches/{batch_id} | Obtener lote |
-| GET | /crop-batches/greenhouse/{greenhouse_id} | Lotes por area de cultivo |
-| POST | /crop-batches | Crear lote |
-| PUT | /crop-batches/{batch_id} | Actualizar lote |
-| DELETE | /crop-batches/{batch_id} | Eliminar lote |
+El endpoint es `POST /asistente/preguntar` con `{"pregunta": "..."}` y devuelve `{"respuesta": "..."}`.
 
-### Users
+**El asistente nunca muestra SQL.** La respuesta se arma a partir del resultado de la consulta con plantillas en espanol: el usuario lee "Hay 20 invernaderos registrados: Invernadero Tomate Chonto Cajica, ..." y nunca ve una sentencia `SELECT`.
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /users | Listar usuarios |
-| GET | /users/{user_id} | Obtener usuario |
-| GET | /users/username/{username} | Obtener por username |
-| POST | /users | Crear usuario |
-| PUT | /users/{user_id} | Actualizar usuario |
-| DELETE | /users/{user_id} | Eliminar usuario |
+El frontend lo consume en la ruta `/asistente`.
 
-### Alerts
+---
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /alerts | Listar alertas |
-| GET | /alerts/activas | Alertas activas |
-| GET | /alerts/{alert_id} | Obtener alerta |
-| POST | /alerts | Crear alerta |
-| PATCH | /alerts/{alert_id}/resolver | Resolver alerta |
-| PATCH | /alerts/{alert_id}/reconocer | Reconocer alerta |
+## Frontend SvelteKit
 
-### Irrigation Zones
+### Estructura
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /irrigation-zones | Listar zonas |
-| GET | /irrigation-zones/{zone_id} | Obtener zona |
-| GET | /irrigation-zones/greenhouse/{greenhouse_id} | Zonas por area de cultivo |
-| POST | /irrigation-zones | Crear zona |
-| PUT | /irrigation-zones/{zone_id} | Actualizar zona |
-| DELETE | /irrigation-zones/{zone_id} | Eliminar zona |
+- `src/lib/components/` - 16 componentes reutilizables en subcarpetas: `AlertBox`, `Badge`, `Card`, `ConfirmDialog`, `CrudPage`, `DataTable`, `Footer`, `FormField`, `Header`, `LoadingSpinner`, `Modal`, `Navbar`, `PageHeader`, `Sidebar`, `StatCard`, `Toast`.
+- `src/lib/services/` - **la unica capa que hace `fetch`**: un nucleo (`api.js`) mas un archivo por dominio (`auth.js`, `crops.js`, `sensors.js`, ...). Las rutas y los componentes nunca llaman `fetch` directamente.
+- `src/routes/` - `+layout.svelte` y `+page.svelte` unicamente. El grupo `(app)/` aporta el esqueleto con Navbar, Sidebar y Footer.
 
-### Irrigation Logs
+### Proxy
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /irrigation-logs | Listar registros |
-| GET | /irrigation-logs/{log_id} | Obtener registro |
-| GET | /irrigation-logs/zone/{zone_id} | Registros por zona |
-| POST | /irrigation-logs | Crear registro |
+`vite.config.js` redirige las llamadas al backend sin CORS y sin URLs absolutas en el codigo:
 
-### Actuators
+```js
+server: {
+  proxy: {
+    '/api': {
+      target: process.env.VITE_API_TARGET || 'http://localhost:8000',
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/api/, '')
+    },
+    '/api-express': {
+      target: process.env.VITE_EXPRESS_TARGET || 'http://localhost:3000',
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/api-express/, '')
+    }
+  }
+}
+```
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /actuators | Listar actuadores |
-| GET | /actuators/{actuator_id} | Obtener actuador |
-| GET | /actuators/greenhouse/{greenhouse_id} | Actuadores por area de cultivo |
-| POST | /actuators | Crear actuador |
-| PUT | /actuators/{actuator_id} | Actualizar actuador |
-| DELETE | /actuators/{actuator_id} | Eliminar actuador |
+### Formularios
 
-### Actuator Controls
+`bind:value` para capturar datos, `preventDefault()` en cada envio y `onMount()` para la carga inicial.
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /actuator-controls | Listar controles |
-| GET | /actuator-controls/{control_id} | Obtener control |
-| GET | /actuator-controls/actuator/{actuator_id} | Controles por actuador |
-| POST | /actuator-controls | Crear control |
+### Los IDs no se ven
 
-### Greenhouse Settings
+En ningun modulo se muestra un identificador de base de datos, y no existe ningun campo para escribirlo. Las llaves foraneas se eligen **por nombre** en un desplegable (el backend resuelve el alias `greenhouse_nombre`, `sensor_nombre`, `zone_nombre`, `rol_nombre`, ...). El `id` solo se usa internamente para construir la URL de edicion o borrado.
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | /greenhouse-settings | Listar configuraciones |
-| GET | /greenhouse-settings/{setting_id} | Obtener configuracion |
-| GET | /greenhouse-settings/greenhouse/{greenhouse_id} | Config por area de cultivo |
-| POST | /greenhouse-settings | Crear configuracion |
-| PUT | /greenhouse-settings/greenhouse/{greenhouse_id} | Actualizar configuracion |
+### DataTables
 
-## Endpoints Auxiliares (Express)
+Todas las tablas del sitio usan `datatables.net-bs5` a traves del componente `DataTable`, con busqueda, orden y paginacion en espanol.
 
-| Metodo | Ruta | Descripcion |
-|--------|------|-------------|
-| GET | / | Raiz de la API |
-| GET | /health | Estado de salud |
-| GET | /sensores-externos | Listar sensores externos |
-| GET | /sensores-externos/:id | Obtener sensor por ID |
-| POST | /sensores-externos | Crear sensor |
-| PUT | /sensores-externos/:id | Actualizar sensor |
-| DELETE | /sensores-externos/:id | Eliminar sensor (soft delete) |
-| GET | /lecturas-externas | Listar lecturas |
-| POST | /lecturas-externas | Crear lectura |
-| GET | /alertas-externas | Listar alertas |
-| POST | /alertas-externas | Crear alerta |
-| PUT | /alertas-externas/:id | Actualizar alerta |
-| DELETE | /alertas-externas/:id | Eliminar alerta (soft delete) |
+---
+
+## Pruebas
+
+Las pruebas no requieren una base de datos real: la capa de conexion se simula y se verifica el SQL generado.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\ -q
+```
+
+Cubren:
+
+- Que todo listado filtre por `estado = TRUE`.
+- Que el borrado genere `UPDATE ... SET estado = FALSE` y **nunca** `DELETE FROM`.
+- Que `require_permission` consulte `moduloxrol` por nombre de rol y rechace con 403.
+- Que el asistente rechace sentencias destructivas y que su respuesta no contenga SQL.
+- Que los modelos de escritura no acepten `id`.
+
+---
 
 ## Despliegue
 
 ### Render.com
 
-Ambos servicios API estan desplegados en Render.com:
-- API Principal: Servicio web con Uvicorn
-- API Auxiliar: Servicio web con Node.js
+| Servicio | Root Directory | Build | Start |
+|---|---|---|---|
+| API principal | (vacio) | `pip install -r requirements.txt` | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| Frontend | `frontend` | `npm install && npm run build` | sitio estatico, publish `build` |
 
-### Railway.app
+Variables de la API: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL=true`, `SECRET_KEY` y `CORS_ORIGINS` con la URL del frontend.
 
-La base de datos MySQL esta hospedada en Railway con conexion publica habilitada.
+En el frontend, si se publica como sitio estatico, define `VITE_API_URL` y `VITE_EXPRESS_URL` con las URLs publicas y agrega la regla de reescritura `/*` -> `/index.html`.
 
-### Variables de Entorno
+---
 
-**API Principal (Neon PostgreSQL):**
-- DB_HOST
-- DB_NAME
-- DB_USER
-- DB_PASSWORD
-- DB_PORT
+## Reglas de negocio implementadas
 
-**API Auxiliar (Railway MySQL):**
-- MYSQL_URL: mysql://root:password@host:puerto/database
-- PORT: 3000
-
-**Nota:** Las credenciales reales se configuran en los servicios de despliegue y no se almacenan en el repositorio.
-
-## Tech Stack
-
-- FastAPI + PostgreSQL (Neon)
-- Express + MySQL (Railway)
-- JWT Authentication
-- Render (despliegue)
-- Pydantic (validacion de datos)
-- bcrypt (seguridad de contrasenas)
-- asyncpg (conexion PostgreSQL asincrona)
-- mysql2 (driver MySQL)
-
-## Frontend Svelte
-
-Proyecto SvelteKit en `frontend/` (JavaScript, Bootstrap por CDN, DataTables), siguiendo la guia de clase.
-
-**Estructura (guia SVELT_JS_2):**
-- `src/routes/` - una carpeta por pagina con su `+page.svelte` (`login`, `(app)/inicio`, `(app)/cultivos`, `(app)/usuarios`, ...).
-- `src/lib/components/<Componente>/<Componente>.svelte` - 14 componentes reutilizables: Navbar, Sidebar, Footer, DataTable, Modal, FormField, ConfirmDialog, CrudPage, PageHeader, StatCard, Badge, AlertBox, LoadingSpinner, ToastHost.
-- `src/lib/config/modulos.js` - describe columnas y campos de cada modulo.
-- `src/lib/api.js` y `src/lib/stores/` - llamadas a la API, sesion JWT y mensajes.
-
-**Funcionamiento:**
-- Login con JWT (`POST /auth/login`). El token se guarda en el navegador y se envia en cada peticion.
-- El menu y los permisos de cada rol salen de la base de datos (`GET /auth/modulos`, tabla `moduloxrol`).
-- Todas las tablas usan DataTables. Nunca se muestran ni se piden IDs: las llaves foraneas se eligen por nombre.
-- Eliminar solo cambia `estado` a falso; `creado` y `actualizado` los llena la base de datos.
-- Los datos son compartidos: lo que registra un rol se ve en los demas roles (tablero y modulos comunes).
-
-**Usuarios de prueba** (del `schema.sql`; cambialos antes de entregar):
-
-| Rol | Usuario | Contrasena |
-|-----|---------|------------|
-| administrador | admin | Admin123* |
-| operador | operador1 ... operador10 | Operador123* |
-| agronomo | agronomo1 ... agronomo9 | Agronomo123* |
-
-### Version local
-
-1. **PostgreSQL:** crear una base de datos y cargar `schema.sql` (borra y recrea las tablas con 20 registros por tabla).
-2. **API principal:** crear `.env` con `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL=false` y `SECRET_KEY`; luego `pip install -r requirements.txt` y `uvicorn main:app --port 8000`.
-3. **MySQL + API auxiliar:** cargar `express-api/schema.sql`; en `express-api/` crear `.env` con `MYSQL_URL` y `PORT=3000`; `npm install` y `npm start`.
-4. **Frontend:** en `frontend/` copiar `.env.example` a `.env`, `npm install` y `npm run dev` (http://localhost:5173).
-
-### Version en la nube (Render)
-
-1. **Neon (PostgreSQL):** ejecutar `schema.sql`. **Railway (MySQL):** ejecutar `express-api/schema.sql`.
-2. **API principal (Web Service):** Root Directory vacio (raiz). Build: `pip install -r requirements.txt`. Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`. Variables: `DB_*` de Neon, `SECRET_KEY` (valor largo y aleatorio) y `CORS_ORIGINS` con la URL del frontend.
-3. **API auxiliar (Web Service):** Root Directory `express-api`. Build: `npm install`. Start: `npm start`. Variable: `MYSQL_URL`.
-4. **Frontend (Static Site):** Root Directory `frontend`. Build: `npm install && npm run build`. Publish directory: `build`. Variables: `VITE_API_URL` y `VITE_EXPRESS_URL` con las URLs de las dos APIs. Agregar una regla de reescritura `/*` -> `/index.html` (SPA).
+| Regla | Donde se cumple |
+|---|---|
+| Windows: sin scripts bash, sin rutas macOS, `python -m ...` | `scripts/`, `requirements.txt`, `app/core/database.py` |
+| Minimo 10 componentes reutilizables | `frontend/src/lib/components/` (16) |
+| Todas las llamadas a la API centralizadas | `frontend/src/lib/services/` |
+| `fetch` prohibido fuera de services | verificacion por grep en `frontend/src/` |
+| Proxy `/api` al backend | `frontend/vite.config.js` |
+| `bind:value`, `preventDefault()`, `onMount()` | componentes y rutas del frontend |
+| Menu funcional y responsive con DataTables | `(app)/+layout.svelte`, `DataTable.svelte` |
+| Nunca mostrar IDs | `frontend/src/lib/config/modulos.js` + alias del backend |
+| SQL puro con psycopg2, sin ORM | `app/repositories/` |
+| Minimo 12 tablas con auditoria y borrado logico | `schema.sql` (16 tablas) |
+| JWT y redireccion por rol | `app/core/auth.py`, `moduloxrol` |
+| Reflejo de procesos entre roles | matriz de permisos en `moduloxrol` |
+| El asistente nunca muestra SQL | `app/core/asistente.py` |
