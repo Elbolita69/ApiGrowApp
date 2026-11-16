@@ -149,6 +149,33 @@ def test_los_sensores_de_un_invernadero_se_filtran_por_nombre(monkeypatch, fake_
         assert palabra not in respuesta.lower()
 
 
+def test_un_invernadero_numerado_se_busca_por_id_y_no_por_nombre(monkeypatch, fake_db):
+    """'el invernadero 1' se resuelve por su id, no por su nombre.
+
+    Regresion: el filtro por nombre no encontraba nada cuando el usuario
+    se referia al invernadero por su numero.
+    """
+    fake_db.respuestas = {
+        "count(*)": [{"total": 1}],
+        "from sensors": [{"nombre": "Sensor Temperatura 01", "tipo": "temperatura"}],
+        "from greenhouses": [{"nombre": "Invernadero Tomate Chonto Cajica"}],
+    }
+    monkeypatch.setattr(modulo_asistente, "_db", fake_db)
+
+    respuesta = responder_en_lenguaje_natural(
+        "Que sensores tiene el invernadero 1", {"rol": "lector"}
+    )
+
+    assert "Invernadero Tomate Chonto Cajica" in respuesta
+    assert "1" in respuesta
+    # La consulta debe llevar el id como parametro, no el nombre.
+    consultas = [sql for sql, _ in fake_db.consultas]
+    assert any("g.id = %s" in sql for sql in consultas)
+    assert not any("ILIKE %s" in sql for sql in consultas)
+    for palabra in ("select", "from", "where"):
+        assert palabra not in respuesta.lower()
+
+
 def test_el_esquema_se_arma_desde_information_schema(monkeypatch, fake_db):
     """`get_schema()` lee la estructura de la base de datos."""
     fake_db.respuestas = {

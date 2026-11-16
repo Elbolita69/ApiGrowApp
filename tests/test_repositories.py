@@ -101,6 +101,26 @@ def test_listado_devuelve_lista_de_diccionarios(clase, tabla, patch_db):
     assert resultado == [{"id": 1, "nombre": "Registro 1"}]
 
 
+def test_las_relaciones_se_resuelven_por_nombre(patch_db):
+    """Los listados que tienen llave foranea exponen el nombre, no el id.
+
+    El frontend nunca debe mostrar un identificador de base de datos: las
+    relaciones viajan como `greenhouse_nombre`, `sensor_nombre`, etc.
+    """
+    from app.repositories.sensor_repo import SensorRepository
+
+    fake = patch_db(_modulo_de(SensorRepository))
+    fake.filas = [
+        {"id": 1, "nombre": "Sensor 1", "greenhouse_nombre": "Invernadero Central"}
+    ]
+
+    resultado = SensorRepository().obtener_todos()
+
+    sql, _params = fake.consultas[0]
+    assert "AS greenhouse_nombre" in sql
+    assert "greenhouse_nombre" in resultado[0]
+
+
 def test_no_existe_borrado_fisico_en_el_codigo():
     """Ningun archivo de `app/` puede contener un borrado fisico."""
     ofensores = []

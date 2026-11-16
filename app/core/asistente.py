@@ -337,6 +337,24 @@ SQL_SENSORES_INVERNADERO = (
     "WHERE s.estado = TRUE AND g.nombre ILIKE %s ORDER BY s.id ASC LIMIT 20;"
 )
 
+# El usuario puede Referring al invernadero por su nombre o por su numero.
+# Cuando dice "el invernadero 1" se busca por id, no por nombre.
+SQL_CONTEO_SENSORES_INVERNADERO_POR_ID = (
+    "SELECT COUNT(*) AS total FROM sensors s "
+    "JOIN greenhouses g ON s.greenhouse_id = g.id "
+    "WHERE s.estado = TRUE AND g.id = %s;"
+)
+
+SQL_SENSORES_INVERNADERO_POR_ID = (
+    "SELECT s.nombre, s.tipo, s.unidad, g.nombre AS greenhouse_nombre FROM sensors s "
+    "JOIN greenhouses g ON s.greenhouse_id = g.id "
+    "WHERE s.estado = TRUE AND g.id = %s ORDER BY s.id ASC LIMIT 20;"
+)
+
+SQL_NOMBRE_INVERNADERO_POR_ID = (
+    "SELECT nombre FROM greenhouses WHERE estado = TRUE AND id = %s;"
+)
+
 SQL_CONTEO_ALERTAS_ACTIVAS = (
     "SELECT COUNT(*) AS total FROM alerts "
     "WHERE estado = TRUE AND estado_alerta = 'activa';"
@@ -348,6 +366,19 @@ SQL_ALERTAS_ACTIVAS = (
     "WHERE a.estado = TRUE AND a.estado_alerta = 'activa' "
     "ORDER BY a.creado DESC LIMIT 20;"
 )
+
+
+def _plural(singular: str, total: int) -> str:
+    """Convierte una palabra en plural segun la cantidad ('1 sensor', '2 sensores')."""
+    if total == 1:
+        return singular
+    # Palabras que ya estan en plural o que no cambian: 'estudiantes', 'sensores'.
+    if singular.endswith(("s", "z")):
+        return singular
+    # Vocales: solo se agrega la 's' ('lectura' -> 'lecturas').
+    if singular.endswith(("a", "e", "i", "o", "u")):
+        return singular + "s"
+    return singular + "es"
 
 
 def _detalle_entidad(clave: str) -> Callable[[dict], str]:
@@ -415,7 +446,7 @@ def _responder_conteo(filas: list[dict], etiqueta: str) -> str:
         total = int(valor) if valor is not None else 0
     if total == 0:
         return f"No hay {etiqueta} en la base de datos."
-    return f"Hay {total} {etiqueta} en la base de datos."
+    return f"Hay {total} {_plural(etiqueta, total)} en la base de datos."
 
 
 def _responder_listado(
@@ -473,29 +504,40 @@ def responder_en_lenguaje_natural(pregunta: str, usuario: Optional[dict] = None)
             return SIN_DATOS
 
         if nombre_invernadero:
-            if conteo:
-                filas = run_sql_query(
-                    SQL_CONTEO_SENSORES_INVERNADERO, (f"%{nombre_invernadero}%",)
+            # "el invernadero 1" se resuelve por id; por nombre, con coincidencia parcial.
+            es_numero = nombre_invernadero.isdigit()
+            if es_numero:
+                sql_conteo = SQL_CONTEO_SENSORES_INVERNADERO_POR_ID
+                sql_listado = SQL_SENSORES_INVERNADERO_POR_ID
+                params = (int(nombre_invernadero),)
+                referencia = run_sql_query(SQL_NOMBRE_INVERNADERO_POR_ID, params)
+                etiqueta_invernadero = (
+                    referencia[0].get("nombre") if referencia else nombre_invernadero
                 )
+            else:
+                sql_conteo = SQL_CONTEO_SENSORES_INVERNADERO
+                sql_listado = SQL_SENSORES_INVERNADERO
+                params = (f"%{nombre_invernadero}%",)
+                etiqueta_invernadero = nombre_invernadero
+
+            if conteo:
+                filas = run_sql_query(sql_conteo, params)
                 total = int(filas[0].get("total") or 0) if filas else 0
                 return (
-                    f"El invernadero {nombre_invernadero} tiene {total} sensores "
-                    "en la base de datos."
+                    f"El invernadero {etiqueta_invernadero} tiene "
+                    f"{total} {_plural('sensor', total)} en la base de datos."
                 )
-            filas = run_sql_query(
-                SQL_SENSORES_INVERNADERO, (f"%{nombre_invernadero}%",)
-            )
+            filas = run_sql_query(sql_listado, params)
             if not filas:
                 return (
-                    f"El invernadero {nombre_invernadero} no tiene sensores registrados."
+                    f"El invernadero {etiqueta_invernadero} no tiene sensores registrados."
                 )
-            total_filas = run_sql_query(
-                SQL_CONTEO_SENSORES_INVERNADERO, (f"%{nombre_invernadero}%",)
-            )
+            total_filas = run_sql_query(sql_conteo, params)
             total = int(total_filas[0].get("total") or 0) if total_filas else 0
             lista = _enumerar(filas, _detalle_entidad("sensores"))
             return (
-                f"El invernadero {nombre_invernadero} tiene {total} sensores: {lista}."
+                f"El invernadero {etiqueta_invernadero} tiene {total} "
+                f"{_plural('sensor', total)}: {lista}."
             )
 
         if clave == "alertas" and "activa" in texto:

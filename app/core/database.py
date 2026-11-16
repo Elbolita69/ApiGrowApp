@@ -121,9 +121,16 @@ class Database:
 
     Todas las instancias comparten un unico pool (importante en Neon, que
     limita el numero de conexiones simultaneas).
+
+    `ThreadedConnectionPool.getconn()` NO espera: si no hay una conexion
+    libre lanza `PoolError` de inmediato. Como el panel carga varios modulos
+    en paralelo, eso agotaba el pool y devolvia 503. Por eso hay un
+    semaforo: cada peticion toma un turno y espera a que haya conexion
+    libre en lugar de fallar.
     """
 
     _pool: Optional[psycopg2_pool.ThreadedConnectionPool] = None
+    _turnos: Optional[threading.Semaphore] = None
     _lock = threading.Lock()
 
     def __init__(self) -> None:
@@ -136,6 +143,8 @@ class Database:
         self.ssl = os.getenv("DB_SSL", "true").strip().lower() != "false"
         self.pool_min = max(1, int(os.getenv("DB_POOL_MIN", "1") or 1))
         self.pool_max = max(self.pool_min, int(os.getenv("DB_POOL_MAX", "5") or 5))
+        # Espera maxima por una conexion libre (segundos).
+        self.pool_timeout = max(1, int(os.getenv("DB_POOL_TIMEOUT", "20") or 20))
 
     # ------------------------------------------------------------------ pool
     def get_pool(self) -> psycopg2_pool.ThreadedConnectionPool:
@@ -144,6 +153,7 @@ class Database:
             with Database._lock:
                 if Database._pool is None:
                     Database._pool = self._crear_pool()
+                    Database._turnos = threading.Semaphore(self.pool_max)
         return Database._pool
 
     def _crear_pool(self) -> psycopg2_pool.ThreadedConnectionPool:
@@ -162,12 +172,32 @@ class Database:
         except psycopg2.Error as exc:
             raise _error_503(MSG_SIN_CONEXION, "creacion del pool", exc)
 
+    def _tomar_turno(self) -> None:
+        """Espera a que haya una conexion libre del pool.
+
+        Sin esta espera, varias peticiones simultaneas agotan el pool y
+        devuelven 503 aunque la base de datos este perfectamente disponible.
+        """
+        self.get_pool()
+        turno = Database._turnos
+        if turno is None:  # pragma: no cover - defensa ante poolManual
+            return
+        if not turno.acquire(timeout=self.pool_timeout):
+            raise _error_503(MSG_POOL_AGOTADO, "espera de conexion libre", None)
+
+    def _liberar_turno(self) -> None:
+        turno = Database._turnos
+        if turno is not None:
+            turno.release()
+
     def get_connection(self) -> ConexionPool:
         """Toma una conexion del pool (usable como context manager)."""
+        self._tomar_turno()
         pool_ = self.get_pool()
         try:
             raw = pool_.getconn()
         except psycopg2.Error as exc:
+            self._liberar_turno()
             raise _error_503(MSG_POOL_AGOTADO, "obtencion de conexion", exc)
         return ConexionPool(self, raw)
 
@@ -176,11 +206,14 @@ class Database:
         raw = conn._raw if isinstance(conn, ConexionPool) else conn
         pool_ = Database._pool
         if pool_ is None:
+            self._liberar_turno()
             return
         try:
             pool_.putconn(raw)
         except psycopg2.Error as exc:
             logger.error("No se pudo devolver la conexion al pool: %s", _sanear(str(exc)))
+        finally:
+            self._liberar_turno()
 
     def close_pool(self) -> None:
         """Cierra el pool y todas sus conexiones."""
@@ -192,6 +225,7 @@ class Database:
                     logger.error("No se pudo cerrar el pool: %s", _sanear(str(exc)))
                 finally:
                     Database._pool = None
+                    Database._turnos = None
 
     # --------------------------------------------------------------- helpers
     def consultar(self, sql: str, params: Optional[Sequence[Any]] = None) -> list[dict]:
