@@ -1,5 +1,6 @@
 // Funciones de formato compartidas por la tabla, las etiquetas y el tablero.
 
+/** @type {Record<string, string>} */
 export const COLORES = {
 	alta: 'danger',
 	media: 'warning',
@@ -23,8 +24,10 @@ export const COLORES = {
 	manual: 'secondary'
 };
 
+/** @param {unknown} texto */
 export const colorDe = (texto) => COLORES[String(texto).toLowerCase()] ?? 'secondary';
 
+/** @param {unknown} valor */
 export function esc(valor) {
 	return String(valor ?? '')
 		.replace(/&/g, '&amp;')
@@ -34,28 +37,33 @@ export function esc(valor) {
 		.replace(/'/g, '&#39;');
 }
 
+/** @param {unknown} texto */
 export const badgeHtml = (texto) => `<span class="badge text-bg-${colorDe(texto)}">${esc(texto)}</span>`;
 
+/** @param {string | number | Date | null | undefined} v */
 export function fechaHora(v) {
 	if (!v) return '';
 	const d = new Date(v);
-	return isNaN(d) ? String(v) : d.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+	return isNaN(d.getTime()) ? String(v) : d.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
 }
 
+/** @param {string | null | undefined} v */
 export function fecha(v) {
 	if (!v) return '';
 	const [a, m, d] = String(v).slice(0, 10).split('-');
 	return a && m && d ? `${d}/${m}/${a}` : String(v);
 }
 
+/** @param {unknown} v */
 export const numero = (v) =>
 	v === null || v === undefined || v === '' ? '' : new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(Number(v));
 
 /** Convierte un valor ISO a 'YYYY-MM-DDTHH:mm' en hora local (para <input type="datetime-local">). */
+/** @param {string | number | Date | null | undefined} v */
 export function aInputFechaHora(v) {
 	if (!v) return '';
 	const d = new Date(v);
-	if (isNaN(d)) return '';
-	const p = (n) => String(n).padStart(2, '0');
+	if (isNaN(d.getTime())) return '';
+	const p = /** @param {number} n */ (n) => String(n).padStart(2, '0');
 	return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }

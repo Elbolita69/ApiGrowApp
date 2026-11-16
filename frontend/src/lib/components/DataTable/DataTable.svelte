@@ -10,6 +10,7 @@
 	 */
 	let { columnas, filas, puedeEditar = false, puedeEliminar = false, onedit, ondelete } = $props();
 
+	/** @type {HTMLDivElement} */
 	let host;
 
 	const ES = {
@@ -33,12 +34,15 @@
 		el.className = 'table table-hover align-middle w-100';
 		host.appendChild(el);
 
-		const columnasDt = cols.map((c) => ({
-			title: c.label,
-			// display: HTML (etiquetas); orden/busqueda: valor plano
-			data: (fila, tipo) => (tipo === 'display' ? fila.vista[c.key] : fila.orden[c.key]),
-			defaultContent: ''
-		}));
+		const columnasDt = /** @type {any[]} */ (
+			cols.map((c) => ({
+				title: c.label,
+				// display: HTML (etiquetas); orden/busqueda: valor plano
+				data: (/** @type {any} */ fila, /** @type {string} */ tipo) =>
+					tipo === 'display' ? fila.vista[c.key] : fila.orden[c.key],
+				defaultContent: ''
+			}))
+		);
 		if (editar || eliminar) {
 			columnasDt.push({
 				title: 'Acciones',
@@ -46,7 +50,7 @@
 				orderable: false,
 				searchable: false,
 				className: 'text-nowrap',
-				render: (d, t, fila, meta) =>
+				render: (/** @type {any} */ d, /** @type {any} */ t, /** @type {any} */ fila, /** @type {any} */ meta) =>
 					(editar
 						? `<button class="btn btn-sm btn-outline-primary me-1" data-act="edit" data-i="${meta.row}" title="Editar"><i class="bi bi-pencil-square"></i></button>`
 						: '') +
@@ -70,8 +74,11 @@
 		};
 	});
 
+	/** @param {MouseEvent} e */
 	function clic(e) {
-		const boton = e.target.closest('button[data-act]');
+		const boton = /** @type {HTMLButtonElement | null} */ (
+			/** @type {HTMLElement | null} */ (e.target)?.closest('button[data-act]')
+		);
 		if (!boton) return;
 		const fila = filas[Number(boton.dataset.i)];
 		if (!fila) return;

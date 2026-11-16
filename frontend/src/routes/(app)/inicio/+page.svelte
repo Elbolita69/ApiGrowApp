@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { api } from '#lib/api.js';
+	import { serviciosPorModulo } from '#lib/services/index.js';
 	import { MODULOS } from '#lib/config/modulos.js';
 	import { session } from '#lib/stores/session.svelte.js';
 	import { fechaHora } from '#lib/utils/formato.js';
@@ -9,7 +9,9 @@
 	import Badge from '#lib/components/Badge/Badge.svelte';
 	import LoadingSpinner from '#lib/components/LoadingSpinner/LoadingSpinner.svelte';
 
+	/** @type {Record<string, number | string>} */
 	let conteos = $state({});
+	/** @type {any[]} */
 	let alertas = $state([]);
 	let cargando = $state(true);
 
@@ -21,10 +23,11 @@
 		// (los cambios hechos por otros roles se reflejan aqui).
 		const resultados = await Promise.all(
 			modulos.map(async (m) => {
-				const cfg = MODULOS[m.nombre];
 				try {
-					const filas = await api.get(cfg.endpoint, cfg.base ?? 'fastapi');
-					if (m.nombre === 'alerts') alertas = filas.filter((a) => a.estado_alerta !== 'resuelta').slice(0, 6);
+					const filas = await serviciosPorModulo[m.nombre].listar();
+					if (m.nombre === 'alerts') {
+						alertas = filas.filter((/** @type {any} */ a) => a.estado_alerta !== 'resuelta').slice(0, 6);
+					}
 					return [m.nombre, filas.length];
 				} catch {
 					return [m.nombre, '-'];

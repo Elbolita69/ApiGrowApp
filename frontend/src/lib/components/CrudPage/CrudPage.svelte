@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
-	import { api } from '#lib/api.js';
 	import { MODULOS, LOOKUPS } from '#lib/config/modulos.js';
+	import { serviciosPorModulo } from '#lib/services/index.js';
 	import { session, permisosDe } from '#lib/stores/session.svelte.js';
 	import { exito, fallo } from '#lib/stores/toast.svelte.js';
 	import { esc, badgeHtml, fechaHora, fecha, numero, aInputFechaHora } from '#lib/utils/formato.js';
@@ -14,43 +14,74 @@
 	import AlertBox from '#lib/components/AlertBox/AlertBox.svelte';
 
 	/**
+	 * @typedef {import('#lib/config/modulos.js').Columna} Columna
+	 * @typedef {import('#lib/config/modulos.js').Campo} Campo
+	 */
+
+	/**
 	 * Pagina CRUD generica: DataTable + formulario modal + confirmacion de eliminacion.
 	 * Lo que puede hacer el usuario (ver/crear/editar/eliminar) sale de la tabla moduloxrol.
+	 * Las llamadas a la API salen SIEMPRE por la capa de servicios (src/lib/services).
 	 * @type {{modulo: string}}
 	 */
 	let { modulo } = $props();
 
-	const cfg = MODULOS[modulo];
-	const base = cfg.base ?? 'fastapi';
+	const cfg = $derived(MODULOS[modulo]);
+	const servicio = $derived(serviciosPorModulo[modulo]);
 	const permisos = $derived(permisosDe(modulo));
 
+	/** @type {any[]} */
 	let datos = $state([]);
+	/** @type {Record<string, Record<string, string>>} */
 	let mapas = $state({}); // nombre de lookup -> { id: etiqueta }
+	/** @type {Record<string, { valor: any, etiqueta: string }[]>} */
 	let listas = $state({}); // nombre de lookup -> [{valor, etiqueta}]
 	let cargando = $state(true);
 	let error = $state('');
 
 	let modalAbierto = $state(false);
+	/** @type {any|null} */
 	let editando = $state(null);
+	/** @type {Record<string, any>} */
 	let form = $state({});
 	let guardando = $state(false);
 	let errorForm = $state('');
 	let aEliminar = $state(null);
 	let eliminando = $state(false);
 
-	const nombresLookup = [
+	const nombresLookup = $derived([
 		...new Set(
-			[...cfg.columnas, ...cfg.campos].map((x) => x.lookup).filter(Boolean)
+			[...cfg.columnas, ...cfg.campos].map((x) => x.lookup).filter((x) => x !== undefined)
 		)
-	];
+	]);
 
-	const itemPath = (fila) => cfg.endpoint.replace(/\/$/, '') + '/' + fila.id;
+	// Llave foranea -> alias con el nombre que devuelve la API (greenhouse_id -> greenhouse_nombre).
+	/** @param {string} key @returns {string|null} */
+	const aliasDe = (key) => (key.endsWith('_id') ? `${key.slice(0, -3)}_nombre` : null);
 
+	// Identificador interno del registro (nunca se muestra en pantalla).
+	/** @param {any} fila @returns {any} */
+	const idDe = (fila) => fila[cfg.claveId ?? 'id'];
+
+	// Etiqueta legible de una fila de un catalogo (nombre, nunca el id).
+	/** @param {Record<string, any>} fila @param {string} label @returns {string} */
+	const etiquetaDe = (fila, label) => {
+		const valor = fila[label] ?? fila[`${label}_nombre`] ?? fila.nombre ?? fila.rol_nombre ?? fila.ubicacion;
+		return valor === null || valor === undefined ? '' : String(valor);
+	};
+
+	/**
+	 * @param {string} nombre
+	 * @returns {Promise<[string, { valor: any, etiqueta: string }[]]>}
+	 */
 	async function cargarLookup(nombre) {
 		const l = LOOKUPS[nombre];
 		try {
-			const filas = await api.get(l.endpoint, l.base ?? 'fastapi');
-			return [nombre, filas.map((r) => ({ valor: r.id, etiqueta: String(r[l.label] ?? '') }))];
+			const filas = await serviciosPorModulo[l.servicio].listar();
+			return [
+				nombre,
+				filas.map((/** @type {any} */ r) => ({ valor: r.id, etiqueta: etiquetaDe(r, l.label) }))
+			];
 		} catch {
 			return [nombre, []]; // el rol puede no tener acceso a esa lista
 		}
@@ -61,11 +92,13 @@
 		error = '';
 		try {
 			const [filas, ...lookups] = await Promise.all([
-				api.get(cfg.endpoint, base),
+				servicio.listar(),
 				...nombresLookup.map(cargarLookup)
 			]);
 			datos = filas;
+			/** @type {Record<string, { valor: any, etiqueta: string }[]>} */
 			const nuevasListas = {};
+			/** @type {Record<string, Record<string, string>>} */
 			const nuevosMapas = {};
 			for (const [nombre, lista] of lookups) {
 				nuevasListas[nombre] = lista;
@@ -74,7 +107,7 @@
 			listas = nuevasListas;
 			mapas = nuevosMapas;
 		} catch (e) {
-			error = e.message;
+			error = e instanceof Error ? e.message : String(e);
 		} finally {
 			cargando = false;
 		}
@@ -82,20 +115,38 @@
 
 	onMount(cargar);
 
-	// Columnas visibles: se omite una columna de llave foranea si no se pudo traducir a nombres.
+	// Columnas visibles: si una llave foranea no se puede traducir a nombres, se oculta
+	// la columna (nunca se muestra el id crudo).
 	const columnas = $derived(
-		cfg.columnas.filter((c) => !c.lookup || Object.keys(mapas[c.lookup] ?? {}).length > 0)
+		cfg.columnas.filter((c) => {
+			if (!c.lookup) return true;
+			const alias = aliasDe(c.key);
+			if (alias && datos.some((f) => f[alias] !== undefined && f[alias] !== null && f[alias] !== '')) {
+				return true;
+			}
+			return Object.keys(mapas[c.lookup] ?? {}).length > 0;
+		})
 	);
 
+	/** @param {Columna} col @param {Record<string, any>} fila */
 	function valorCelda(col, fila) {
 		let v = fila[col.key];
-		if (col.lookup) v = mapas[col.lookup]?.[v] ?? '';
+		if (col.lookup) {
+			const alias = aliasDe(col.key);
+			const porAlias = alias ? fila[alias] : null;
+			v =
+				porAlias !== undefined && porAlias !== null && porAlias !== ''
+					? porAlias
+					: (mapas[col.lookup]?.[v] ?? '');
+		}
 		return v;
 	}
 
 	const filas = $derived(
 		datos.map((original) => {
+			/** @type {Record<string, string>} */
 			const vista = {};
+			/** @type {Record<string, any>} */
 			const orden = {};
 			for (const c of columnas) {
 				const v = valorCelda(c, original);
@@ -111,11 +162,13 @@
 		})
 	);
 
-	const opcionesDe = (campo) =>
-		campo.lookup ? (listas[campo.lookup] ?? []) : (campo.opciones ?? []).map((o) => ({ valor: o, etiqueta: o }));
+	const opcionesDe = (/** @type {Campo} */ campo) =>
+		campo.lookup
+			? (listas[campo.lookup] ?? [])
+			: (campo.opciones ?? []).map((o) => ({ valor: o, etiqueta: o }));
 
 	const camposVisibles = $derived(cfg.campos.filter((c) => !(editando && c.soloCrear)));
-	const esRequerido = (c) => !!(c.requerido || (c.requeridoAlCrear && !editando));
+	const esRequerido = (/** @type {Campo} */ c) => !!(c.requerido || (c.requeridoAlCrear && !editando));
 
 	function abrirCrear() {
 		editando = null;
@@ -124,6 +177,7 @@
 		modalAbierto = true;
 	}
 
+	/** @param {any} fila */
 	function abrirEditar(fila) {
 		editando = fila;
 		form = Object.fromEntries(
@@ -140,24 +194,25 @@
 	}
 
 	function armarPayload() {
+		/** @type {Record<string, any>} */
 		const payload = {};
 		for (const c of camposVisibles) {
 			let v = form[c.key];
 			const vacio = v === '' || v === null || v === undefined;
-			if (vacio) {
-				if (base === 'express') payload[c.key] = null; // Express exige todos los parametros
-				continue;
-			}
+			if (vacio) continue;
 			if (c.tipo === 'number' || (c.tipo === 'select' && c.lookup)) v = Number(v);
 			if (c.tipo === 'datetime-local') v = String(v).replace('T', ' ') + ':00';
 			payload[c.key] = v;
 		}
 		if (!editando) {
-			for (const [campo, origen] of Object.entries(cfg.automaticos ?? {})) payload[campo] = session[origen];
+			for (const [campo, origen] of Object.entries(cfg.automaticos ?? {})) {
+				payload[campo] = /** @type {any} */ (session)[origen];
+			}
 		}
 		return payload;
 	}
 
+	/** @param {SubmitEvent} e */
 	async function guardar(e) {
 		e.preventDefault();
 		guardando = true;
@@ -165,17 +220,16 @@
 		try {
 			const payload = armarPayload();
 			if (editando) {
-				const ruta = cfg.rutaEditar ? cfg.rutaEditar(editando) : itemPath(editando);
-				await api.put(ruta, payload, base);
+				await servicio.actualizar(idDe(editando), payload);
 				exito(`${cfg.singular[0].toUpperCase() + cfg.singular.slice(1)} actualizado correctamente`);
 			} else {
-				await api.post(cfg.endpoint, payload, base);
+				await servicio.crear(payload);
 				exito(`${cfg.singular[0].toUpperCase() + cfg.singular.slice(1)} registrado correctamente`);
 			}
 			modalAbierto = false;
 			await cargar();
 		} catch (err) {
-			errorForm = err.message;
+			errorForm = err instanceof Error ? err.message : String(err);
 		} finally {
 			guardando = false;
 		}
@@ -184,12 +238,12 @@
 	async function eliminar() {
 		eliminando = true;
 		try {
-			await api.delete(cfg.rutaEliminar ? cfg.rutaEliminar(aEliminar) : itemPath(aEliminar), base);
+			await servicio.eliminar(idDe(aEliminar));
 			exito('Registro eliminado');
 			aEliminar = null;
 			await cargar();
 		} catch (err) {
-			fallo(err.message);
+			fallo(err instanceof Error ? err.message : String(err));
 		} finally {
 			eliminando = false;
 		}

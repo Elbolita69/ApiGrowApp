@@ -1,19 +1,27 @@
-import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
-export default defineConfig({
-	plugins: [
-		sveltekit({
-			compilerOptions: {
-				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
-				runes: ({ filename }) =>
-					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
-			},
+// Se pueden cambiar sin tocar codigo (variables de entorno del proceso de Vite).
+const API_TARGET = process.env.VITE_API_TARGET || 'http://localhost:8000';
+const EXPRESS_TARGET = process.env.VITE_EXPRESS_TARGET || 'http://localhost:3000';
 
-			// Aplicacion de una sola pagina (SPA): se publica como sitio estatico en Render.
-			// El fallback index.html permite recargar cualquier ruta (/cultivos, /usuarios...).
-			adapter: adapter({ fallback: 'index.html' })
-		})
-	]
+export default defineConfig({
+	plugins: [sveltekit()],
+	server: {
+		proxy: {
+			// Ojo: '/api-express' va ANTES de '/api' porque '/api-express' tambien
+			// empieza por '/api' y el primero que coincide gana.
+			'/api-express': {
+				target: EXPRESS_TARGET,
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/api-express/, '')
+			},
+			'/api': {
+				target: API_TARGET,
+				changeOrigin: true,
+				// La API expone /auth/login, no /api/auth/login: se quita el prefijo.
+				rewrite: (path) => path.replace(/^\/api/, '')
+			}
+		}
+	}
 });

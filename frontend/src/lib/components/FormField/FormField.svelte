@@ -5,7 +5,7 @@
 	 * @type {{campo: any, valor: any, opciones?: Array<{valor: any, etiqueta: string}>, requerido?: boolean}}
 	 */
 	let { campo, valor = $bindable(), opciones = [], requerido = false } = $props();
-	const id = 'campo_' + campo.key;
+	const id = $derived('campo_' + campo.key);
 </script>
 
 <div class="col-12 col-md-{campo.ancho ?? 6}">
@@ -28,8 +28,7 @@
 			type={campo.tipo}
 			step={campo.step}
 			min={campo.min}
-			value={valor ?? ''}
-			oninput={(e) => (valor = e.currentTarget.value)}
+			bind:value={valor}
 			required={requerido}
 			autocomplete={campo.tipo === 'password' ? 'new-password' : 'off'}
 		/>

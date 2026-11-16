@@ -1,7 +1,17 @@
 {
-	"extends": "$app/tsconfig",
+	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
-		"strict": true
+		"strict": true,
+		"checkJs": true,
+		"allowJs": true
 	},
-	"include": ["src", "vite.config.ts"]
+	"include": [
+		".svelte-kit/ambient.d.ts",
+		".svelte-kit/non-ambient.d.ts",
+		".svelte-kit/types/**/$types.d.ts",
+		"src/**/*.js",
+		"src/**/*.svelte",
+		"vite.config.js",
+		"svelte.config.js"
+	]
 }

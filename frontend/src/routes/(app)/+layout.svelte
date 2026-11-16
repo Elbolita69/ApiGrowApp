@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { api } from '#lib/api.js';
+	import { auth } from '#lib/services/index.js';
 	import { MODULOS } from '#lib/config/modulos.js';
 	import { session, restaurarSesion, cerrarSesion } from '#lib/stores/session.svelte.js';
 	import Navbar from '#lib/components/Navbar/Navbar.svelte';
@@ -14,15 +14,17 @@
 	let menuAbierto = $state(false);
 
 	// Menu del rol: unicamente los modulos que la BD (tabla moduloxrol) le permite ver.
-	const items = $derived(
-		session.modulos
+	// El asistente es una herramienta general y siempre esta disponible.
+	const items = $derived([
+		...session.modulos
 			.filter((m) => MODULOS[m.nombre])
 			.map((m) => ({
 				ruta: '/' + MODULOS[m.nombre].ruta,
 				titulo: MODULOS[m.nombre].titulo,
 				icono: MODULOS[m.nombre].icono
-			}))
-	);
+			})),
+		{ ruta: '/asistente', titulo: 'Asistente', icono: 'bi-stars' }
+	]);
 
 	onMount(async () => {
 		if (!session.token && !restaurarSesion()) {
@@ -30,9 +32,10 @@
 			return;
 		}
 		try {
-			const [modulos, yo] = await Promise.all([api.get('/auth/modulos'), api.get('/auth/me')]);
+			const [modulos, yo] = await Promise.all([auth.modulos(), auth.me()]);
 			session.modulos = modulos;
-			session.nombre = yo.nombre;
+			session.nombre = yo.nombre || session.nombre;
+			session.rol = yo.rol || session.rol;
 			session.listo = true;
 		} catch {
 			cerrarSesion();

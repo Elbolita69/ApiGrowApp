@@ -3,25 +3,67 @@
 // Aqui solo se describe como pintar cada modulo (columnas del DataTable y campos del formulario).
 // Regla del taller: nunca se muestran ni se piden IDs; las llaves foraneas se eligen por nombre.
 
+/**
+ * Columna del DataTable.
+ * @typedef {Object} Columna
+ * @property {string} key clave de la columna en la respuesta de la API
+ * @property {string} label texto que se ve
+ * @property {string} [tipo] 'numero' | 'etiqueta' | 'fecha' | 'fechahora'
+ * @property {string} [lookup] catalogo usado para traducir una llave foranea a nombre
+ */
+
+/**
+ * Campo del formulario.
+ * @typedef {Object} Campo
+ * @property {string} key clave del campo
+ * @property {string} label texto que se ve
+ * @property {string} [tipo] text | number | date | datetime-local | email | password | select | textarea
+ * @property {string} [lookup] catalogo de donde salen las opciones del select
+ * @property {string[]} [opciones] valores fijos de un select
+ * @property {boolean} [requerido]
+ * @property {boolean} [requeridoAlCrear]
+ * @property {boolean} [soloCrear]
+ * @property {string} [ayuda]
+ * @property {string | number} [step]
+ * @property {string | number} [min]
+ * @property {number} [ancho] columnas del formulario Bootstrap (6 o 12)
+ */
+
+/**
+ * Configuracion de un modulo.
+ * @typedef {Object} Modulo
+ * @property {string} titulo
+ * @property {string} singular
+ * @property {string} icono
+ * @property {string} ruta
+ * @property {string} [claveId] campo que identifica el registro (por defecto 'id')
+ * @property {Record<string, string>} [automaticos] campos que se llenan solos
+ * @property {Columna[]} columnas
+ * @property {Campo[]} campos
+ */
+
+// Catalogos usados para traducir llaves foraneas a NOMBRES (nunca se muestra el id).
+// `servicio` es la clave del servicio en src/lib/services/index.js.
+/** @type {Record<string, { servicio: string, label: string }>} */
 export const LOOKUPS = {
-	greenhouses: { endpoint: '/greenhouses/', label: 'nombre' },
-	sensors: { endpoint: '/sensors/', label: 'nombre' },
-	crops: { endpoint: '/crops/', label: 'nombre' },
-	zones: { endpoint: '/irrigation-zones/', label: 'nombre' },
-	actuators: { endpoint: '/actuators/', label: 'nombre' },
-	roles: { endpoint: '/roles/', label: 'nombre' },
-	sensoresExternos: { endpoint: '/sensores-externos', base: 'express', label: 'ubicacion' }
+	greenhouses: { servicio: 'greenhouses', label: 'nombre' },
+	sensors: { servicio: 'sensors', label: 'nombre' },
+	crops: { servicio: 'crops', label: 'nombre' },
+	zones: { servicio: 'irrigation_zones', label: 'nombre' },
+	actuators: { servicio: 'actuators', label: 'nombre' },
+	roles: { servicio: 'roles', label: 'nombre' },
+	sensoresExternos: { servicio: 'sensores_externos', label: 'ubicacion' }
 };
 
 const TIPOS_SENSOR = ['temperatura', 'humedad', 'ph', 'luz', 'co2'];
 
+/** @type {Record<string, Modulo>} */
 export const MODULOS = {
 	greenhouses: {
 		titulo: 'Invernaderos',
 		singular: 'invernadero',
 		icono: 'bi-house-gear',
 		ruta: 'invernaderos',
-		endpoint: '/greenhouses/',
 		columnas: [
 			{ key: 'nombre', label: 'Nombre' },
 			{ key: 'ubicacion', label: 'Ubicacion' },
@@ -41,7 +83,6 @@ export const MODULOS = {
 		singular: 'sensor',
 		icono: 'bi-thermometer-half',
 		ruta: 'sensores',
-		endpoint: '/sensors/',
 		columnas: [
 			{ key: 'nombre', label: 'Sensor' },
 			{ key: 'tipo', label: 'Tipo', tipo: 'etiqueta' },
@@ -63,7 +104,6 @@ export const MODULOS = {
 		singular: 'lectura',
 		icono: 'bi-graph-up',
 		ruta: 'lecturas',
-		endpoint: '/sensor-readings/',
 		columnas: [
 			{ key: 'sensor_nombre', label: 'Sensor' },
 			{ key: 'tipo', label: 'Tipo', tipo: 'etiqueta' },
@@ -82,7 +122,6 @@ export const MODULOS = {
 		singular: 'cultivo',
 		icono: 'bi-flower2',
 		ruta: 'cultivos',
-		endpoint: '/crops/',
 		columnas: [
 			{ key: 'nombre', label: 'Cultivo' },
 			{ key: 'nombre_cientifico', label: 'Nombre cientifico' },
@@ -111,7 +150,6 @@ export const MODULOS = {
 		singular: 'lote',
 		icono: 'bi-basket',
 		ruta: 'lotes',
-		endpoint: '/crop-batches/',
 		columnas: [
 			{ key: 'cultivo_nombre', label: 'Cultivo' },
 			{ key: 'greenhouse_id', label: 'Invernadero', lookup: 'greenhouses' },
@@ -142,7 +180,6 @@ export const MODULOS = {
 		singular: 'alerta',
 		icono: 'bi-bell',
 		ruta: 'alertas',
-		endpoint: '/alerts/',
 		columnas: [
 			{ key: 'greenhouse_nombre', label: 'Invernadero' },
 			{ key: 'tipo', label: 'Tipo', tipo: 'etiqueta' },
@@ -173,7 +210,6 @@ export const MODULOS = {
 		singular: 'zona de riego',
 		icono: 'bi-droplet',
 		ruta: 'zonas-riego',
-		endpoint: '/irrigation-zones/',
 		columnas: [
 			{ key: 'nombre', label: 'Zona' },
 			{ key: 'greenhouse_nombre', label: 'Invernadero' },
@@ -195,7 +231,6 @@ export const MODULOS = {
 		singular: 'registro de riego',
 		icono: 'bi-clock-history',
 		ruta: 'historial-riego',
-		endpoint: '/irrigation-logs/',
 		columnas: [
 			{ key: 'zone_nombre', label: 'Zona de riego' },
 			{ key: 'duracion_minutos', label: 'Duracion (min)', tipo: 'numero' },
@@ -219,7 +254,6 @@ export const MODULOS = {
 		singular: 'actuador',
 		icono: 'bi-fan',
 		ruta: 'actuadores',
-		endpoint: '/actuators/',
 		columnas: [
 			{ key: 'nombre', label: 'Actuador' },
 			{ key: 'tipo', label: 'Tipo', tipo: 'etiqueta' },
@@ -247,7 +281,6 @@ export const MODULOS = {
 		singular: 'orden de control',
 		icono: 'bi-toggles',
 		ruta: 'control-actuadores',
-		endpoint: '/actuator-controls/',
 		columnas: [
 			{ key: 'actuator_nombre', label: 'Actuador' },
 			{ key: 'accion', label: 'Accion', tipo: 'etiqueta' },
@@ -277,10 +310,8 @@ export const MODULOS = {
 		singular: 'parametro',
 		icono: 'bi-sliders',
 		ruta: 'parametros',
-		endpoint: '/greenhouse-settings/',
-		// En la API los parametros se editan/eliminan por invernadero
-		rutaEditar: (f) => `/greenhouse-settings/greenhouse/${f.greenhouse_id}`,
-		rutaEliminar: (f) => `/greenhouse-settings/greenhouse/${f.greenhouse_id}`,
+		// En la API los parametros se editan/eliminan por invernadero (clave interna).
+		claveId: 'greenhouse_id',
 		columnas: [
 			{ key: 'greenhouse_nombre', label: 'Invernadero' },
 			{ key: 'temp_min', label: 'T min (°C)', tipo: 'numero' },
@@ -309,7 +340,6 @@ export const MODULOS = {
 		singular: 'usuario',
 		icono: 'bi-people',
 		ruta: 'usuarios',
-		endpoint: '/users/',
 		columnas: [
 			{ key: 'nombre', label: 'Nombre' },
 			{ key: 'username', label: 'Usuario' },
@@ -336,8 +366,6 @@ export const MODULOS = {
 		singular: 'sensor externo',
 		icono: 'bi-cloud-sun',
 		ruta: 'sensores-externos',
-		endpoint: '/sensores-externos',
-		base: 'express',
 		columnas: [
 			{ key: 'ubicacion', label: 'Estacion' },
 			{ key: 'tipo', label: 'Variable', tipo: 'etiqueta' },
@@ -361,8 +389,6 @@ export const MODULOS = {
 		singular: 'lectura externa',
 		icono: 'bi-clipboard-data',
 		ruta: 'lecturas-externas',
-		endpoint: '/lecturas-externas',
-		base: 'express',
 		columnas: [
 			{ key: 'sensor_id', label: 'Estacion', lookup: 'sensoresExternos' },
 			{ key: 'valor', label: 'Valor', tipo: 'numero' },
@@ -380,8 +406,6 @@ export const MODULOS = {
 		singular: 'alerta externa',
 		icono: 'bi-cloud-lightning-rain',
 		ruta: 'alertas-externas',
-		endpoint: '/alertas-externas',
-		base: 'express',
 		columnas: [
 			{ key: 'mensaje', label: 'Mensaje' },
 			{ key: 'prioridad', label: 'Prioridad', tipo: 'etiqueta' },
@@ -395,5 +419,12 @@ export const MODULOS = {
 	}
 };
 
-/** Lista de modulos conocidos por la aplicacion (para armar el menu en el orden de la BD). */
-export const rutaDe = (nombre) => (MODULOS[nombre] ? '/' + MODULOS[nombre].ruta : null);
+/**
+ * Lista de modulos conocidos por la aplicacion (para armar el menu en el orden de la BD).
+ * @param {string} nombre
+ * @returns {string|null}
+ */
+export const rutaDe = (nombre) => {
+	const modulos = /** @type {Record<string, { ruta: string }>} */ (MODULOS);
+	return modulos[nombre] ? '/' + modulos[nombre].ruta : null;
+};

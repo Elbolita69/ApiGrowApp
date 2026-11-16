@@ -5,6 +5,7 @@
 	 */
 	let { titulo, abierto, onclose, tamano = 'lg', children, pie } = $props();
 
+	/** @param {KeyboardEvent} e */
 	function teclado(e) {
 		if (abierto && e.key === 'Escape') onclose();
 	}

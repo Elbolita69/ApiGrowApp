@@ -1,7 +1,7 @@
 <script>
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { request } from '#lib/api.js';
+	import { login } from '#lib/services/auth.js';
 	import { iniciarSesion, restaurarSesion } from '#lib/stores/session.svelte.js';
 	import AlertBox from '#lib/components/AlertBox/AlertBox.svelte';
 
@@ -14,16 +14,17 @@
 		if (restaurarSesion()) goto('/inicio', { replaceState: true });
 	});
 
+	/** @param {SubmitEvent} e */
 	async function entrar(e) {
 		e.preventDefault();
 		error = '';
 		cargando = true;
 		try {
-			const r = await request('fastapi', '/auth/login', { method: 'POST', form: { username, password } });
+			const r = await login(username, password);
 			iniciarSesion(r.access_token);
 			await goto('/inicio');
 		} catch (err) {
-			error = err.message;
+			error = err instanceof Error ? err.message : String(err);
 		} finally {
 			cargando = false;
 		}
