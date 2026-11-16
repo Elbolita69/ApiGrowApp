@@ -1,0 +1,66 @@
+# Blueprint de Render: despliega las tres piezas de GrowApp de una vez.
+# Render -> New -> Blueprint -> elegir este repositorio.
+# Las variables con `sync: false` las pide Render en el formulario (son secretos
+# o URLs que solo se conocen despues del primer despliegue).
+services:
+  # API principal: FastAPI + PostgreSQL en Neon
+  - type: web
+    name: growapp-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: neondb
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: DB_POOL_MIN
+        value: "5"
+      - key: DB_POOL_MAX
+        value: "15"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+
+  # API auxiliar: Express + MySQL en Aiven (modulos externos)
+  - type: web
+    name: growapp-express
+    runtime: node
+    plan: free
+    rootDir: express-api
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: MYSQL_URL
+        sync: false
+
+  # Frontend: SvelteKit compilado como sitio estatico
+  - type: web
+    name: growapp
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+      - key: VITE_EXPRESS_URL
+        sync: false

@@ -12,7 +12,7 @@ API REST y panel web para la gestion de invernaderos inteligentes (cultivos, sen
 4. [Estructura del proyecto](#estructura-del-proyecto)
 5. [Arquitectura](#arquitectura)
 6. [Base de datos principal (PostgreSQL - Neon)](#base-de-datos-principal-postgresql---neon)
-7. [Base de datos auxiliar (MySQL - Railway)](#base-de-datos-auxiliar-mysql---railway)
+7. [Base de datos auxiliar (MySQL - Aiven)](#base-de-datos-auxiliar-mysql---aiven)
 8. [Autenticacion, JWT y permisos por rol](#autenticacion-jwt-y-permisos-por-rol)
 9. [Endpoints de la API](#endpoints-de-la-api)
 10. [Asistente de consultas en lenguaje natural](#asistente-de-consultas-en-lenguaje-natural)
@@ -302,9 +302,11 @@ Svelte 5 en modo runes, `adapter-static` con `fallback: 'index.html'` (SPA), Boo
 
 ---
 
-## Base de datos auxiliar (MySQL - Railway)
+## Base de datos auxiliar (MySQL - Aiven)
 
 3 tablas: `sensores_externos`, `lecturas_externas`, `alertas_externas`, con los mismos campos de auditoria y borrado logico. Se cargan con `express-api/schema.sql`.
+
+La base vive en el plan gratuito de MySQL de [Aiven](https://aiven.io). Su Service URI trae `?ssl-mode=REQUIRED`; `express-api/src/config/opciones.js` lo traduce a TLS para `mysql2`. Para cargar el esquema sin instalar MySQL: `cd express-api && npm run db:init` (no duplica datos si ya existen).
 
 ---
 
@@ -463,6 +465,7 @@ El proyecto tiene dos piezas que se despliegan por separado en Render:
 
 - **La API** (FastAPI + PostgreSQL en Neon) -> Web Service
 - **El frontend** (SvelteKit) -> Static Site
+- **La API auxiliar** (Express + MySQL en Aiven) -> Web Service
 
 La base de datos ya esta en Neon, asi que solo se despliega el codigo.
 
@@ -534,9 +537,11 @@ Y en *Settings → Redirects/Headers* agrega la regla de reescritura:
 
 La URL publica del frontend te sirve para completar `CORS_ORIGINS` en la API (y volver a desplegar la API si la cambias).
 
-### 3. La API auxiliar (opcional)
+### 3. La API auxiliar (modulos externos)
 
-Si la despliegas, en Render como otro Web Service con Root Directory `express-api`, Build `npm install`, Start `npm start`, y la variable `MYSQL_URL` apuntando a tu MySQL de Railway.
+En Render como otro Web Service con Root Directory `express-api`, Build `npm install`, Start `npm start`, Health Check `/health` y la variable `MYSQL_URL` con el Service URI de Aiven. Despues agrega su URL publica como `VITE_EXPRESS_URL` en el frontend y vuelve a compilarlo.
+
+> **Atajo:** el archivo `render.yaml` de la raiz es un *Blueprint* con las tres piezas. En Render → **New → Blueprint** → elige el repositorio y completa las variables que pide (las de Neon, `MYSQL_URL`, `CORS_ORIGINS`, `VITE_API_URL` y `VITE_EXPRESS_URL`).
 
 ### 4. Orden recomendado
 

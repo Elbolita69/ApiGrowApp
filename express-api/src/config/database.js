@@ -1,11 +1,6 @@
 const mysql = require('mysql2/promise');
+const { construirConfig } = require('./opciones');
 
-const pool = mysql.createPool({
-    uri: process.env.MYSQL_URL,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    timezone: 'local'
-});
+const pool = mysql.createPool(construirConfig(process.env));
 
 module.exports = pool;

@@ -36,7 +36,7 @@ Documento de arranque para el PC con Windows 10/11. Todo lo que aparece aquí es
 | Node.js | 20 o superior | El frontend (SvelteKit) | `node --version` y `npm --version` |
 | VS Code | Cualquiera | Editar el código | `code --version` |
 | Cuenta en Neon | — | La base de datos PostgreSQL | <https://neon.tech> (gratis) |
-| Cuenta en Railway | — | Solo la API auxiliar | <https://railway.app> (opcional) |
+| Cuenta en Aiven (gratis) | — | Solo la API auxiliar | <https://aiven.io> (opcional) |
 
 **Si `python --version` no funciona**, es casi siempre porque al instalar Python no marcaste la casilla *"Add python.exe to PATH"*. Reinstálalo y márcala, o usa el **Launcher de Python** de python.org para instalar Python 3.12.
 
@@ -383,9 +383,9 @@ Invernaderos · Sensores · Lecturas de sensores · Cultivos · Lotes de cultivo
 
 ## 10. API auxiliar Express (opcional)
 
-Solo hace falta si vas a usar los tres módulos de datos meteorológicos externos (sensores externos, lecturas externas, alertas externas), que viven en MySQL (Railway).
+Solo hace falta si vas a usar los tres módulos de datos meteorológicos externos (sensores externos, lecturas externas, alertas externas), que viven en MySQL (Aiven, plan gratuito).
 
-1. Crea una base de datos MySQL en <https://railway.app> y carga `express-api/schema.sql` en su editor SQL.
+1. Crea una cuenta en <https://aiven.io> (no pide tarjeta) → **Create service** → **MySQL** → plan **Free** → **Create**. Espera a que diga *Running* y copia el **Service URI** de la pestaña *Overview*.
 2. Crea `express-api\.env`:
 
    ```powershell
@@ -394,19 +394,22 @@ Solo hace falta si vas a usar los tres módulos de datos meteorológicos externo
    cd ..
    ```
 
-3. Completa `MYSQL_URL` con los datos de Railway:
+3. Pega el Service URI en `MYSQL_URL` (tal cual, con el `?ssl-mode=REQUIRED` del final):
 
    ```env
-   MYSQL_URL=mysql://usuario:contrasena@host:3306/nombre_base
+   MYSQL_URL=mysql://avnadmin:contrasena@mysql-xxxx.aivencloud.com:12345/defaultdb?ssl-mode=REQUIRED
    PORT=3000
    ```
 
-4. En una **terminal 3**:
+4. Instala las dependencias y carga las tablas con sus datos de ejemplo (no hace falta instalar MySQL; si ya tienen datos, no se duplican):
 
    ```powershell
    cd "C:\Users\duvan\OneDrive\Escritorio\Nueva carpeta\ApiGrowApp-main\express-api"
-   npm start
+   npm install
+   npm run db:init
    ```
+
+5. Arranca la API auxiliar con `npm start`, o simplemente usa `iniciar_todo.bat`: si existe `express-api\.env`, la abre en su propia ventana.
 
 5. Comprueba: <http://localhost:3000/health> → `{"status":"ok", ...}`
 

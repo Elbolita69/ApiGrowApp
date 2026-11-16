@@ -63,6 +63,14 @@ REM --- 3. Levantar la API en su propia ventana ------------------------
 echo Levantando la API en http://localhost:8000 ...
 start "GrowApp - API" cmd /k call "%~dp0scripts\api_local.bat"
 
+REM --- 3b. API auxiliar (Express + MySQL) para los modulos externos ---
+if exist "express-api\.env" (
+  echo Levantando la API auxiliar en http://localhost:3000 ...
+  start "GrowApp - API Express" cmd /k call "%~dp0scripts\express_local.bat"
+) else (
+  echo [AVISO] No existe express-api\.env: los modulos externos daran error.
+)
+
 REM --- 4. Esperar a que la API responda ------------------------------
 echo Esperando a que la API este lista...
 timeout /t 12 /nobreak >nul
@@ -80,11 +88,12 @@ echo ============================================
 echo   Todo listo:
 echo     Frontend:  http://localhost:5173
 echo     API:       http://localhost:8000
+echo     API Express (modulos externos): http://localhost:3000
 echo     Documentacion de la API: http://localhost:8000/docs
 echo.
 echo   Usuario de prueba:  admin  /  Admin123*
 echo ============================================
 echo.
-echo Las dos ventanas quedaron abiertas. Cerralas para detener el proyecto.
+echo Las ventanas quedaron abiertas. Cerralas para detener el proyecto.
 echo.
 pause
