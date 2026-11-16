@@ -92,6 +92,16 @@ Vuelve a abrir PowerShell después de instalar para que los comandos nuevos se r
 
 ## 4. Instalar las dependencias del proyecto
 
+### 4.0 Antes de nada: mira qué versión de Node tenés
+
+```powershell
+node --version
+```
+
+El proyecto funciona con **Node 18, 20 o 22** (cualquiera de esas). Si tu
+versión es 16 o inferior, actualiza Node desde <https://nodejs.org/> (descarga
+la **LTS**) y reinstala.
+
 ### 4.1 Todo con un solo script (lo más rápido)
 
 Desde la **raíz del proyecto** en PowerShell:
@@ -140,6 +150,15 @@ cd ..
 ```
 
 > **Importante:** el proyecto **no** incluye `node_modules` (venía de un Mac con binarios que no funcionan en Windows). El `npm install` de arriba los regenera para tu equipo. Tarda un par de minutos la primera vez.
+>
+> Si el `npm install` se queja de la versión de Node o de módulos nativos
+> que no encuentra, borra lo que quedó a medias y repite:
+>
+> ```powershell
+> cd frontend
+> Remove-Item -Recurse -Force node_modules
+> npm install
+> ```
 
 ### 4.4 Dependencias de la API auxiliar (solo si la vas a usar)
 
@@ -286,6 +305,9 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
 
+> El mensaje dice `0.0.0.0` porque esa es la dirección en la que el servidor
+> **escucha**. Para entrar desde el navegador se usa **http://localhost:8000**.
+
 ### Comprueba que responde
 
 Abre en el navegador: <http://localhost:8000/health>
@@ -297,6 +319,12 @@ Debe mostrar:
 ```
 
 Y la documentación interactiva: <http://localhost:8000/docs>
+
+Y la raíz: <http://localhost:8000/>
+
+```json
+{"mensaje":"Invernadero Inteligente API","version":"1.0.0","documentacion":"/docs"}
+```
 
 > **Deja esa terminal abierta.** La API se queda corriendo; `Ctrl+C` la detiene.
 
@@ -469,7 +497,18 @@ OneDrive a veces deja archivos en solo lectura o los marca como "sincronizando".
 
 ## 13. Cómo volver a levantar el proyecto otro día
 
-No hace falta repetir nada de la instalación. Solo dos terminales:
+### Opción A: doble clic (la más fácil)
+
+En la raíz del proyecto está `iniciar_todo.bat`. **Doble clic** y se abre:
+
+- una ventana con la **API** (http://localhost:8000)
+- una ventana con el **frontend** (http://localhost:5173)
+- y tu navegador en el login
+
+Antes de arrancar, el script verifica que estén Python, Node, `.venv` y
+`.env`; si falta algo te dice exactamente qué.
+
+### Opción B: dos terminales
 
 **Terminal 1 — la API:**
 ```powershell
@@ -487,6 +526,11 @@ npm run dev
 Y abrir <http://localhost:5173>.
 
 Atajos: `scripts\iniciar_api.bat` y `scripts\iniciar_frontend.bat` hacen lo mismo con doble clic o con una línea de comando.
+
+> **Ojo con las URLs:** la API se abre en **http://localhost:8000**, nunca en
+> `http://0.0.0.0:8000`. `0.0.0.0` es la dirección a la que el servidor
+> *escucha*, no una dirección a la que se pueda entrar desde el navegador:
+> por eso da "no se puede obtener acceso a esta página".
 
 Si algo no cuadra, ejecuta el diagnóstico:
 
