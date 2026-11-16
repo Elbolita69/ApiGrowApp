@@ -160,11 +160,12 @@ npm start
 
 ### Scripts de ayuda
 
-En `scripts/` hay tareas para Windows que evitan repetir comandos a mano:
+En `scripts/` hay tareas para Windows que evitan repetir comandos a mano. La guía completa, paso a paso, está en **[INSTRUCCIONES_WINDOWS.md](INSTRUCCIONES_WINDOWS.md)**:
 
 | Script | Que hace |
 |---|---|
 | `scripts\instalar_dependencias.ps1` | Crea `.venv`, instala Python, `npm install` del frontend y de `express-api`. |
+| `scripts\verificar.ps1` | Diagnostico completo: comprueba herramientas, `.env`, base de datos, API, frontend y pruebas. |
 | `scripts\iniciar_api.ps1` / `.bat` | Levanta la API en el puerto 8000 con recarga. |
 | `scripts\iniciar_frontend.ps1` / `.bat` | Levanta el frontend en el puerto 5173. |
 | `scripts\iniciar_api_express.ps1` | Levanta la API auxiliar en el puerto 3000. |
@@ -292,7 +293,7 @@ Svelte 5 en modo runes, `adapter-static` con `fallback: 'index.html'` (SPA), Boo
 | regador | `regador1` ... `regador4` | `Regador123*` |
 | tecnico | `tecnico1` ... `tecnico3` | `Tecnico123*` |
 | lector | `lector1` ... `lector3` | `Lector123*` |
-| auxiliar_riego | `auxiliar_riego1` | `Auxiliar123*` |
+| auxiliar_riego | `auxiliar_riego1` | `AuxiliarRiego123*` |
 | planificador | `planificador1` | `Planificador123*` |
 | calidad | `calidad1` | `Calidad123*` |
 | mantenimiento | `mantenimiento1` | `Mantenimiento123*` |
