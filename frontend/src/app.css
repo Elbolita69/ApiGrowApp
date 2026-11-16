@@ -1,0 +1,64 @@
+/* Paleta agro: verdes naturales segun la propuesta (invernadero inteligente) */
+:root {
+	--grow-primary: #2e7d32;
+	--grow-dark: #1b5e20;
+	--grow-accent: #8bc34a;
+	--grow-soft: #e8f5e9;
+	--grow-bg: #f4f8f2;
+	--bs-primary: #2e7d32;
+	--bs-primary-rgb: 46, 125, 50;
+	--bs-link-color: #2e7d32;
+	--bs-link-hover-color: #1b5e20;
+}
+
+body {
+	background: var(--grow-bg);
+	color: #263238;
+	font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+}
+
+.btn-primary {
+	--bs-btn-bg: var(--grow-primary);
+	--bs-btn-border-color: var(--grow-primary);
+	--bs-btn-hover-bg: var(--grow-dark);
+	--bs-btn-hover-border-color: var(--grow-dark);
+	--bs-btn-active-bg: var(--grow-dark);
+	--bs-btn-active-border-color: var(--grow-dark);
+	--bs-btn-disabled-bg: var(--grow-primary);
+	--bs-btn-disabled-border-color: var(--grow-primary);
+}
+
+.btn-outline-primary {
+	--bs-btn-color: var(--grow-primary);
+	--bs-btn-border-color: var(--grow-primary);
+	--bs-btn-hover-bg: var(--grow-primary);
+	--bs-btn-hover-border-color: var(--grow-primary);
+	--bs-btn-active-bg: var(--grow-dark);
+}
+
+.form-control:focus,
+.form-select:focus {
+	border-color: var(--grow-accent);
+	box-shadow: 0 0 0 0.2rem rgba(139, 195, 74, 0.25);
+}
+
+.card {
+	border: 0;
+	border-radius: 0.9rem;
+	box-shadow: 0 2px 10px rgba(27, 94, 32, 0.08);
+}
+
+/* DataTables con el tema del sitio */
+.dt-container .dt-search input,
+.dt-container .dt-length select {
+	border-radius: 0.5rem;
+}
+.dt-container .page-item.active .page-link {
+	background: var(--grow-primary);
+	border-color: var(--grow-primary);
+}
+table.dataTable thead th {
+	background: var(--grow-soft);
+	color: var(--grow-dark);
+	white-space: nowrap;
+}
