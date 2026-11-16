@@ -1,92 +1,86 @@
+"""Repositorio de zonas de riego (SQL puro con psycopg2, sincrono)."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.irrigation_zone import IrrigationZone, IrrigationZoneCreate, IrrigationZoneUpdate
-from typing import Optional, List
+from app.models.irrigation_zone import IrrigationZoneCreate, IrrigationZoneUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
+# JOIN con alias legibles: el frontend nunca necesita conocer ids.
+SELECT_IRRIGATION_ZONES = """
+    SELECT iz.*,
+           g.nombre AS greenhouse_nombre
+    FROM irrigation_zones iz
+    JOIN greenhouses g ON iz.greenhouse_id = g.id
+"""
+
 
 class IrrigationZoneRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                """SELECT iz.*, g.nombre as greenhouse_nombre
-                   FROM irrigation_zones iz
-                   JOIN greenhouses g ON iz.greenhouse_id = g.id
-                   WHERE iz.estado = TRUE ORDER BY iz.id ASC;"""
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_IRRIGATION_ZONES
+                    + " WHERE iz.estado = TRUE ORDER BY iz.id ASC;"
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def obtener_por_id(self, zone_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_IRRIGATION_ZONES
+                    + " WHERE iz.estado = TRUE AND iz.id = %s;",
+                    (zone_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
+
+    def obtener_por_greenhouse(self, greenhouse_id: int) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM irrigation_zones WHERE estado = TRUE AND greenhouse_id = %s "
+                    "ORDER BY id ASC;",
+                    (greenhouse_id,),
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def crear(self, zone: IrrigationZoneCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO irrigation_zones (greenhouse_id, nombre,
+                       capacidad_litros_min, capacidad_litros_max, tipo, estado)
+                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;""",
+                    (
+                        zone.greenhouse_id,
+                        zone.nombre,
+                        zone.capacidad_litros_min,
+                        zone.capacidad_litros_max,
+                        zone.tipo,
+                        zone.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, zone_id: int, zone: IrrigationZoneUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "irrigation_zones",
+                zone.model_dump(exclude_unset=True),
+                zone_id,
             )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
 
-    async def obtener_por_id(self, zone_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """SELECT iz.*, g.nombre as greenhouse_nombre
-                   FROM irrigation_zones iz
-                   JOIN greenhouses g ON iz.greenhouse_id = g.id
-                   WHERE iz.estado = TRUE AND iz.id = $1;""", zone_id
-            )
-            return row
-        finally:
-            await self.db.release_connection(conn)
-
-    async def obtener_por_greenhouse(self, greenhouse_id: int) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                "SELECT * FROM irrigation_zones WHERE estado = TRUE AND greenhouse_id = $1 ORDER BY id ASC;", greenhouse_id
-            )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
-
-    async def crear(self, zone: IrrigationZoneCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO irrigation_zones (greenhouse_id, nombre, capacidad_litros_min, capacidad_litros_max, tipo, estado)
-                   VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
-                zone.greenhouse_id, zone.nombre, zone.capacidad_litros_min,
-                zone.capacidad_litros_max, zone.tipo, zone.estado
-            )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
-
-    async def actualizar(self, zone_id: int, zone: IrrigationZoneUpdate) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            fields = []
-            values = []
-            idx = 1
-
-            for field, value in [
-                ("greenhouse_id", zone.greenhouse_id), ("nombre", zone.nombre),
-                ("capacidad_litros_min", zone.capacidad_litros_min), ("capacidad_litros_max", zone.capacidad_litros_max),
-                ("tipo", zone.tipo), ("estado", zone.estado)
-            ]:
-                if value is not None:
-                    fields.append(f"{field} = ${idx}"); values.append(value); idx += 1
-
-            if not fields:
-                return False
-
-            values.append(zone_id)
-            query = f"UPDATE irrigation_zones SET {', '.join(fields)}, actualizado = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING id;"
-            result = await conn.fetchrow(query, *values)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def eliminar(self, zone_id: int) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow("UPDATE irrigation_zones SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING id;", zone_id)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
+    def eliminar(self, zone_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "irrigation_zones", zone_id)

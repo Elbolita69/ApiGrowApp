@@ -1,86 +1,121 @@
-from app.core.database import Database
+"""Repositorio de usuarios (SQL puro con psycopg2, sincrono).
+
+El `password_hash` NUNCA se expone en las respuestas: los metodos publicos
+seleccionan campos explicitos y el hash solo se usa para el login.
+"""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.auth import get_password_hash
-from app.models.user import User, UserCreate, UserUpdate
-from typing import Optional, List
+from app.core.database import Database
+from app.models.user import UserCreate, UserUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
+# Campos publicos de un usuario (sin contrasena).
+SELECT_USUARIOS = """
+    SELECT u.id,
+           u.username,
+           u.email,
+           u.nombre,
+           u.rol_id,
+           r.nombre AS rol_nombre,
+           u.estado,
+           u.creado,
+           u.actualizado
+    FROM usuario u
+    LEFT JOIN rol r ON u.rol_id = r.id
+"""
+
 
 class UserRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                "SELECT id, username, email, nombre, rol_id, estado, creado FROM usuario WHERE estado = TRUE ORDER BY id ASC;"
-            )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_USUARIOS + " WHERE u.estado = TRUE ORDER BY u.id ASC;"
+                )
+                return [dict(fila) for fila in cur.fetchall()]
 
-    async def obtener_por_id(self, user_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                "SELECT id, username, email, nombre, rol_id, estado, creado FROM usuario WHERE estado = TRUE AND id = $1;", user_id
-            )
-            return row
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_por_id(self, user_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_USUARIOS + " WHERE u.estado = TRUE AND u.id = %s;",
+                    (user_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-    async def obtener_por_username(self, username: str):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow("SELECT * FROM usuario WHERE estado = TRUE AND username = $1;", username)
-            return row
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_por_username(self, username: str) -> Optional[dict]:
+        """Usuario por nombre de usuario (sin contrasena)."""
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_USUARIOS + " WHERE u.estado = TRUE AND u.username = %s;",
+                    (username,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-    async def crear(self, user: UserCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO usuario (username, email, password_hash, nombre, rol_id, estado)
-                   VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
-                user.username, user.email, get_password_hash(user.password), user.nombre, user.rol_id, user.estado
-            )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_credenciales_por_username(self, username: str) -> Optional[dict]:
+        """Usuario con su hash de contrasena. Uso interno: solo para el login."""
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """SELECT u.id, u.username, u.email, u.nombre, u.password_hash,
+                       u.rol_id, u.estado, r.nombre AS rol_nombre
+                       FROM usuario u
+                       LEFT JOIN rol r ON u.rol_id = r.id
+                       WHERE u.username = %s;""",
+                    (username,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-    async def actualizar(self, user_id: int, user: UserUpdate) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            fields = []
-            values = []
-            idx = 1
+    def obtener_por_rol(self, rol_nombre: str) -> Optional[dict]:
+        """Id del rol por su nombre exacto (nombre de negocio)."""
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT id FROM rol WHERE nombre = %s AND estado = TRUE;",
+                    (rol_nombre,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-            for field, value in [
-                ("username", user.username), ("email", user.email),
-                ("nombre", user.nombre), ("rol_id", user.rol_id), ("estado", user.estado)
-            ]:
-                if value is not None:
-                    fields.append(f"{field} = ${idx}"); values.append(value); idx += 1
+    def crear(self, user: UserCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO usuario (username, email, password_hash, nombre,
+                       rol_id, estado)
+                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;""",
+                    (
+                        user.username,
+                        user.email,
+                        get_password_hash(user.password),
+                        user.nombre,
+                        user.rol_id,
+                        user.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
 
-            if user.password:
-                fields.append(f"password_hash = ${idx}"); values.append(get_password_hash(user.password)); idx += 1
+    def actualizar(self, user_id: int, user: UserUpdate) -> bool:
+        datos = user.model_dump(exclude_unset=True)
+        if datos.get("password"):
+            datos["password_hash"] = get_password_hash(datos.pop("password"))
+        with self.db.get_connection() as conn:
+            return actualizar_generico(conn, "usuario", datos, user_id)
 
-            if not fields:
-                return False
-
-            values.append(user_id)
-            query = f"UPDATE usuario SET {', '.join(fields)}, actualizado = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING id;"
-            result = await conn.fetchrow(query, *values)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def eliminar(self, user_id: int) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow("UPDATE usuario SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING id;", user_id)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
+    def eliminar(self, user_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "usuario", user_id)

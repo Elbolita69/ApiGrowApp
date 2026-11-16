@@ -1,12 +1,33 @@
+"""Repositorios de la aplicacion (capa de datos sincrona con psycopg2)."""
+
 from app.repositories.greenhouse_repo import GreenhouseRepository
 from app.repositories.sensor_repo import SensorRepository
 from app.repositories.sensor_reading_repo import SensorReadingRepository
 from app.repositories.crop_repo import CropRepository
 from app.repositories.crop_batch_repo import CropBatchRepository
-from app.repositories.user_repo import UserRepository
 from app.repositories.alert_repo import AlertRepository
 from app.repositories.irrigation_zone_repo import IrrigationZoneRepository
 from app.repositories.irrigation_log_repo import IrrigationLogRepository
 from app.repositories.actuator_repo import ActuatorRepository
 from app.repositories.actuator_control_repo import ActuatorControlRepository
 from app.repositories.greenhouse_setting_repo import GreenhouseSettingRepository
+from app.repositories.user_repo import UserRepository
+from app.repositories.estudiante_repo import EstudianteRepository
+from app.repositories.rol_repo import RolRepository
+
+__all__ = [
+    "GreenhouseRepository",
+    "SensorRepository",
+    "SensorReadingRepository",
+    "CropRepository",
+    "CropBatchRepository",
+    "AlertRepository",
+    "IrrigationZoneRepository",
+    "IrrigationLogRepository",
+    "ActuatorRepository",
+    "ActuatorControlRepository",
+    "GreenhouseSettingRepository",
+    "UserRepository",
+    "EstudianteRepository",
+    "RolRepository",
+]

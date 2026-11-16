@@ -1,87 +1,73 @@
+"""Repositorio de sensores (SQL puro con psycopg2, sincrono)."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.sensor import Sensor, SensorCreate, SensorUpdate
-from typing import Optional, List
+from app.models.sensor import SensorCreate, SensorUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
 
 class SensorRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch("SELECT * FROM sensors WHERE estado = TRUE ORDER BY id ASC;")
-            return rows
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM sensors WHERE estado = TRUE ORDER BY id ASC;")
+                return [dict(fila) for fila in cur.fetchall()]
 
-    async def obtener_por_id(self, sensor_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow("SELECT * FROM sensors WHERE estado = TRUE AND id = $1;", sensor_id)
-            return row
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_por_id(self, sensor_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM sensors WHERE estado = TRUE AND id = %s;",
+                    (sensor_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-    async def obtener_por_greenhouse(self, greenhouse_id: int) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                "SELECT * FROM sensors WHERE estado = TRUE AND greenhouse_id = $1 ORDER BY id ASC;", greenhouse_id
+    def obtener_por_greenhouse(self, greenhouse_id: int) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM sensors WHERE estado = TRUE AND greenhouse_id = %s "
+                    "ORDER BY id ASC;",
+                    (greenhouse_id,),
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def crear(self, sensor: SensorCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO sensors (greenhouse_id, tipo, nombre, unidad, ubicacion, estado)
+                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;""",
+                    (
+                        sensor.greenhouse_id,
+                        sensor.tipo,
+                        sensor.nombre,
+                        sensor.unidad,
+                        sensor.ubicacion,
+                        sensor.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, sensor_id: int, sensor: SensorUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "sensors",
+                sensor.model_dump(exclude_unset=True),
+                sensor_id,
             )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
 
-    async def crear(self, sensor: SensorCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO sensors (greenhouse_id, tipo, nombre, unidad, ubicacion, estado)
-                   VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
-                sensor.greenhouse_id, sensor.tipo, sensor.nombre, sensor.unidad,
-                sensor.ubicacion, sensor.estado
-            )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
-
-    async def actualizar(self, sensor_id: int, sensor: SensorUpdate) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            fields = []
-            values = []
-            idx = 1
-
-            if sensor.greenhouse_id is not None:
-                fields.append(f"greenhouse_id = ${idx}"); values.append(sensor.greenhouse_id); idx += 1
-            if sensor.tipo is not None:
-                fields.append(f"tipo = ${idx}"); values.append(sensor.tipo); idx += 1
-            if sensor.nombre is not None:
-                fields.append(f"nombre = ${idx}"); values.append(sensor.nombre); idx += 1
-            if sensor.unidad is not None:
-                fields.append(f"unidad = ${idx}"); values.append(sensor.unidad); idx += 1
-            if sensor.ubicacion is not None:
-                fields.append(f"ubicacion = ${idx}"); values.append(sensor.ubicacion); idx += 1
-            if sensor.estado is not None:
-                fields.append(f"estado = ${idx}"); values.append(sensor.estado); idx += 1
-
-            if not fields:
-                return False
-
-            values.append(sensor_id)
-            query = f"UPDATE sensors SET {', '.join(fields)}, actualizado = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING id;"
-            result = await conn.fetchrow(query, *values)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def eliminar(self, sensor_id: int) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow("UPDATE sensors SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING id;", sensor_id)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
+    def eliminar(self, sensor_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "sensors", sensor_id)

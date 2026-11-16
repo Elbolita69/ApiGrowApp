@@ -1,40 +1,236 @@
-"""Utilidades compartidas para UPDATE dinamico y eliminacion logica."""
+"""Utilidades compartidas de la capa de datos: actualizacion dinamica y borrado logico.
 
-TABLAS_PERMITIDAS = {
-    "sensor_readings", "irrigation_logs", "actuator_controls", "alerts",
+Reglas del taller:
+- El borrado es SIEMPRE logico: `estado = FALSE` (nunca se borra una fila).
+- Toda actualizacion refresca `actualizado = CURRENT_TIMESTAMP`.
+- Solo se pueden tocar las tablas de negocio de la lista blanca.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Mapping, Optional
+
+from psycopg2.extras import RealDictCursor
+
+# Las 14 tablas de negocio (13 de entidades + roles).
+TABLAS_PERMITIDAS = frozenset(
+    {
+        "greenhouses",
+        "sensors",
+        "sensor_readings",
+        "crops",
+        "crop_batches",
+        "alerts",
+        "irrigation_zones",
+        "irrigation_logs",
+        "actuators",
+        "actuator_controls",
+        "greenhouse_settings",
+        "usuario",
+        "estudiantes",
+        "rol",
+    }
+)
+
+# Columnas que se pueden actualizar en cada tabla (las claves primarias y los
+# campos de auditoria quedan fuera de la lista).
+COLUMNAS_PERMITIDAS: Mapping[str, frozenset[str]] = {
+    "greenhouses": frozenset(
+        {"nombre", "ubicacion", "area_metros_cuadrados", "capacidad_maxima", "estado"}
+    ),
+    "sensors": frozenset(
+        {"greenhouse_id", "tipo", "nombre", "unidad", "ubicacion", "estado"}
+    ),
+    "sensor_readings": frozenset({"sensor_id", "valor", "estado"}),
+    "crops": frozenset(
+        {
+            "nombre",
+            "nombre_cientifico",
+            "temperatura_min",
+            "temperatura_max",
+            "humedad_min",
+            "humedad_max",
+            "ph_min",
+            "ph_max",
+            "ciclo_dias",
+            "descripcion",
+            "estado",
+        }
+    ),
+    "crop_batches": frozenset(
+        {
+            "crop_id",
+            "greenhouse_id",
+            "fecha_siembra",
+            "fecha_cosecha_estimada",
+            "fecha_cosecha_real",
+            "cantidad_plantas",
+            "estado_cultivo",
+            "notas",
+            "estado",
+        }
+    ),
+    "alerts": frozenset(
+        {
+            "greenhouse_id",
+            "sensor_id",
+            "tipo",
+            "mensaje",
+            "valor_actual",
+            "umbral",
+            "prioridad",
+            "estado_alerta",
+            "resuelta_en",
+            "estado",
+        }
+    ),
+    "irrigation_zones": frozenset(
+        {
+            "greenhouse_id",
+            "nombre",
+            "capacidad_litros_min",
+            "capacidad_litros_max",
+            "tipo",
+            "estado",
+        }
+    ),
+    "irrigation_logs": frozenset(
+        {
+            "zone_id",
+            "duracion_minutos",
+            "cantidad_agua_litros",
+            "modo",
+            "resultado",
+            "notas",
+            "estado",
+        }
+    ),
+    "actuators": frozenset(
+        {"greenhouse_id", "tipo", "nombre", "ubicacion", "estado_actuador", "estado"}
+    ),
+    "actuator_controls": frozenset(
+        {"actuator_id", "usuario_id", "accion", "valor_ajuste", "resultado", "estado"}
+    ),
+    "greenhouse_settings": frozenset(
+        {
+            "greenhouse_id",
+            "temp_min",
+            "temp_max",
+            "humedad_min",
+            "humedad_max",
+            "luz_min",
+            "ph_min",
+            "ph_max",
+            "intervalo_lectura_minutos",
+            "estado",
+        }
+    ),
+    "usuario": frozenset(
+        {"username", "email", "password_hash", "nombre", "rol_id", "estado"}
+    ),
+    "estudiantes": frozenset({"nombre", "grado", "promedio", "estado"}),
+    "rol": frozenset({"nombre", "descripcion", "estado"}),
 }
 
 
-async def actualizar_generico(db, tabla: str, datos: dict, registro_id: int) -> bool:
-    """UPDATE de los campos recibidos (no nulos). Siempre refresca 'actualizado'."""
-    assert tabla in TABLAS_PERMITIDAS
-    campos = {k: v for k, v in datos.items() if v is not None}
+class TablaNoPermitida(ValueError):
+    """Se intento tocar una tabla fuera de la lista blanca."""
+
+
+def _validar_tabla(tabla: str) -> None:
+    if tabla not in TABLAS_PERMITIDAS:
+        raise TablaNoPermitida(f"La tabla '{tabla}' no esta permitida en esta operacion")
+
+
+def actualizar_generico(
+    conn: Any, tabla: str, datos: Mapping[str, Any], registro_id: int
+) -> bool:
+    """Actualiza los campos recibidos (los que no sean None) de un registro.
+
+    Siempre inyecta `actualizado = CURRENT_TIMESTAMP` y devuelve True si la
+    fila existia y estaba activa.
+    """
+    _validar_tabla(tabla)
+    permitidas = COLUMNAS_PERMITIDAS[tabla]
+    campos = {
+        columna: valor
+        for columna, valor in (datos or {}).items()
+        if columna in permitidas and valor is not None
+    }
     if not campos:
         return False
-    sets = [f"{col} = ${i}" for i, col in enumerate(campos, start=1)]
+    asignaciones = ", ".join(f"{columna} = %s" for columna in campos)
     valores = list(campos.values()) + [registro_id]
-    query = (
-        f"UPDATE {tabla} SET {', '.join(sets)}, actualizado = CURRENT_TIMESTAMP "
-        f"WHERE id = ${len(valores)} RETURNING id;"
+    sql = (
+        f"UPDATE {tabla} SET {asignaciones}, actualizado = CURRENT_TIMESTAMP "
+        f"WHERE id = %s AND estado = TRUE RETURNING id;"
     )
-    conn = await db.get_connection()
-    try:
-        row = await conn.fetchrow(query, *valores)
-        return row is not None
-    finally:
-        await db.release_connection(conn)
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(sql, tuple(valores))
+        fila = cur.fetchone()
+    return fila is not None
 
 
-async def eliminar_logico(db, tabla: str, registro_id: int) -> bool:
-    """Eliminacion logica: estado = FALSE (el registro no se borra)."""
-    assert tabla in TABLAS_PERMITIDAS
-    conn = await db.get_connection()
-    try:
-        row = await conn.fetchrow(
-            f"UPDATE {tabla} SET estado = FALSE, actualizado = CURRENT_TIMESTAMP "
-            "WHERE id = $1 AND estado = TRUE RETURNING id;",
-            registro_id,
+def actualizar_generico_por_campo(
+    conn: Any,
+    tabla: str,
+    campo: str,
+    valor: Any,
+    datos: Mapping[str, Any],
+) -> bool:
+    """Actualiza los campos recibidos de las filas que cumplen `campo = valor`."""
+    _validar_tabla(tabla)
+    permitidas = COLUMNAS_PERMITIDAS[tabla]
+    if campo not in permitidas:
+        raise TablaNoPermitida(
+            f"El campo '{campo}' no se puede actualizar en la tabla '{tabla}'"
         )
-        return row is not None
-    finally:
-        await db.release_connection(conn)
+    campos = {
+        columna: valor_campo
+        for columna, valor_campo in (datos or {}).items()
+        if columna in permitidas and valor_campo is not None
+    }
+    if not campos:
+        return False
+    asignaciones = ", ".join(f"{columna} = %s" for columna in campos)
+    valores = list(campos.values()) + [valor]
+    sql = (
+        f"UPDATE {tabla} SET {asignaciones}, actualizado = CURRENT_TIMESTAMP "
+        f"WHERE {campo} = %s AND estado = TRUE RETURNING id;"
+    )
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(sql, tuple(valores))
+        fila = cur.fetchone()
+    return fila is not None
+
+
+def eliminar_logico(conn: Any, tabla: str, registro_id: int) -> bool:
+    """Borrado logico: `estado = FALSE`. El registro nunca se elimina de la tabla."""
+    _validar_tabla(tabla)
+    sql = (
+        f"UPDATE {tabla} SET estado = FALSE, actualizado = CURRENT_TIMESTAMP "
+        "WHERE id = %s AND estado = TRUE RETURNING id;"
+    )
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(sql, (registro_id,))
+        fila = cur.fetchone()
+    return fila is not None
+
+
+def eliminar_logico_por_campo(
+    conn: Any, tabla: str, campo: str, valor: Any
+) -> bool:
+    """Borrado logico de las filas que cumplem un campo (por ejemplo el invernadero)."""
+    _validar_tabla(tabla)
+    if campo not in COLUMNAS_PERMITIDAS[tabla]:
+        raise TablaNoPermitida(
+            f"El campo '{campo}' no se puede actualizar en la tabla '{tabla}'"
+        )
+    sql = (
+        f"UPDATE {tabla} SET estado = FALSE, actualizado = CURRENT_TIMESTAMP "
+        f"WHERE {campo} = %s AND estado = TRUE RETURNING id;"
+    )
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(sql, (valor,))
+        fila = cur.fetchone()
+    return fila is not None

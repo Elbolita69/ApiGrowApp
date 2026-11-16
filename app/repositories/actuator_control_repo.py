@@ -1,72 +1,98 @@
+"""Repositorio de ordenes de control de actuadores (SQL puro con psycopg2, sincrono).
+
+`usuario_id` SIEMPRE lo inyecta el backend con el usuario autenticado: nunca
+se toma del cuerpo de la peticion.
+"""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.actuator_control import ActuatorControl, ActuatorControlCreate
-from typing import Optional, List
+from app.models.actuator_control import ActuatorControlCreate, ActuatorControlUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
+# JOIN con alias legibles: el frontend nunca necesita conocer ids.
+SELECT_ACTUATOR_CONTROLS = """
+    SELECT ac.*,
+           a.nombre AS actuator_nombre,
+           a.tipo   AS actuator_tipo,
+           u.username AS usuario_username
+    FROM actuator_controls ac
+    JOIN actuators a ON ac.actuator_id = a.id
+    LEFT JOIN usuario u ON ac.usuario_id = u.id
+"""
+
 
 class ActuatorControlRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self, limit: int = 100) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                """SELECT ac.*, a.nombre as actuator_nombre, a.tipo as actuator_tipo,
-                          u.username as usuario_username
-                   FROM actuator_controls ac
-                   JOIN actuators a ON ac.actuator_id = a.id
-                   LEFT JOIN usuario u ON ac.usuario_id = u.id
-                   WHERE ac.estado = TRUE ORDER BY ac.creado DESC LIMIT $1;""", limit
+    def obtener_todos(self, limit: int = 100) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_ACTUATOR_CONTROLS
+                    + " WHERE ac.estado = TRUE ORDER BY ac.creado DESC LIMIT %s;",
+                    (limit,),
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def obtener_por_id(self, control_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_ACTUATOR_CONTROLS
+                    + " WHERE ac.estado = TRUE AND ac.id = %s;",
+                    (control_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
+
+    def obtener_por_actuator(self, actuator_id: int, limit: int = 50) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_ACTUATOR_CONTROLS
+                    + " WHERE ac.estado = TRUE AND ac.actuator_id = %s "
+                    "ORDER BY ac.creado DESC LIMIT %s;",
+                    (actuator_id, limit),
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def crear(
+        self, control: ActuatorControlCreate, usuario_id: Optional[int] = None
+    ) -> Optional[int]:
+        """Registra una orden de control. `usuario_id` es el usuario autenticado."""
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO actuator_controls (actuator_id, usuario_id, accion,
+                       valor_ajuste, resultado, estado)
+                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;""",
+                    (
+                        control.actuator_id,
+                        usuario_id,
+                        control.accion,
+                        control.valor_ajuste,
+                        control.resultado,
+                        control.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, registro_id: int, datos: ActuatorControlUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "actuator_controls",
+                datos.model_dump(exclude_unset=True),
+                registro_id,
             )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
 
-    async def obtener_por_id(self, control_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """SELECT ac.*, a.nombre as actuator_nombre, u.username as usuario_username
-                   FROM actuator_controls ac
-                   JOIN actuators a ON ac.actuator_id = a.id
-                   LEFT JOIN usuario u ON ac.usuario_id = u.id
-                   WHERE ac.estado = TRUE AND ac.id = $1;""", control_id
-            )
-            return row
-        finally:
-            await self.db.release_connection(conn)
-
-    async def obtener_por_actuator(self, actuator_id: int, limit: int = 50) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                """SELECT ac.*, u.username as usuario_username
-                   FROM actuator_controls ac
-                   LEFT JOIN usuario u ON ac.usuario_id = u.id
-                   WHERE ac.estado = TRUE AND ac.actuator_id = $1
-                   ORDER BY ac.creado DESC LIMIT $2;""", actuator_id, limit
-            )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
-
-    async def crear(self, control: ActuatorControlCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO actuator_controls (actuator_id, usuario_id, accion, valor_ajuste, resultado)
-                   VALUES ($1, $2, $3, $4, $5) RETURNING id;""",
-                control.actuator_id, control.usuario_id, control.accion,
-                control.valor_ajuste, control.resultado
-            )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
-
-    async def actualizar(self, registro_id: int, datos) -> bool:
-        from app.repositories.crud_utils import actualizar_generico
-        return await actualizar_generico(self.db, "actuator_controls", datos.model_dump(exclude_unset=True), registro_id)
-
-    async def eliminar(self, registro_id: int) -> bool:
-        from app.repositories.crud_utils import eliminar_logico
-        return await eliminar_logico(self.db, "actuator_controls", registro_id)
+    def eliminar(self, registro_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "actuator_controls", registro_id)

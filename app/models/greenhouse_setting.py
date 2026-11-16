@@ -1,8 +1,12 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
 
 class GreenhouseSettingBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     greenhouse_id: int
     temp_min: float = 15.00
     temp_max: float = 30.00
@@ -14,10 +18,18 @@ class GreenhouseSettingBase(BaseModel):
     intervalo_lectura_minutos: int = 15
     estado: bool = True
 
+
 class GreenhouseSettingCreate(GreenhouseSettingBase):
-    pass
+    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
 
 class GreenhouseSettingUpdate(BaseModel):
+    """Actualizacion parcial: sin `id` ni campos primary key editables."""
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
     temp_min: Optional[float] = None
     temp_max: Optional[float] = None
     humedad_min: Optional[float] = None
@@ -26,13 +38,14 @@ class GreenhouseSettingUpdate(BaseModel):
     ph_min: Optional[float] = None
     ph_max: Optional[float] = None
     intervalo_lectura_minutos: Optional[int] = None
-    estado: Optional[bool] = None
+
 
 class GreenhouseSetting(GreenhouseSettingBase):
+    """Modelo de lectura: incluye la auditoria."""
+
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     actualizado_en: Optional[datetime] = None
     creado: Optional[datetime] = None
     actualizado: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True

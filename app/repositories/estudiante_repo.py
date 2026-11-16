@@ -1,55 +1,63 @@
+"""Repositorio de estudiantes (SQL puro con psycopg2, sincrono)."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.estudiante import Estudiante
+from app.models.estudiante import EstudianteCreate, EstudianteUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
 
 class EstudianteRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self):
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch("SELECT * FROM estudiantes ORDER BY id ASC;")
-            return rows
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM estudiantes WHERE estado = TRUE ORDER BY id ASC;"
+                )
+                return [dict(fila) for fila in cur.fetchall()]
 
-    async def obtener_por_id(self, estudiante_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow("SELECT * FROM estudiantes WHERE id = $1;", estudiante_id)
-            return row
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_por_id(self, estudiante_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM estudiantes WHERE estado = TRUE AND id = %s;",
+                    (estudiante_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-    async def crear(self, estudiante: Estudiante):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                "INSERT INTO estudiantes (nombre, grado, promedio) VALUES ($1, $2, $3) RETURNING id;",
-                estudiante.nombre, estudiante.grado, estudiante.promedio
+    def crear(self, estudiante: EstudianteCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO estudiantes (nombre, grado, promedio, estado)
+                       VALUES (%s, %s, %s, %s) RETURNING id;""",
+                    (
+                        estudiante.nombre,
+                        estudiante.grado,
+                        estudiante.promedio,
+                        estudiante.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, estudiante_id: int, estudiante: EstudianteUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "estudiantes",
+                estudiante.model_dump(exclude_unset=True),
+                estudiante_id,
             )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
 
-    async def eliminar(self, estudiante_id: int):
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow("DELETE FROM estudiantes WHERE id = $1 RETURNING id;", estudiante_id)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def actualizar(self, estudiante_id: int, estudiante: Estudiante):
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow(
-                "UPDATE estudiantes SET nombre = $1, grado = $2, promedio = $3 WHERE id = $4 RETURNING id;",
-                estudiante.nombre, estudiante.grado, estudiante.promedio, estudiante_id
-            )
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
+    def eliminar(self, estudiante_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "estudiantes", estudiante_id)

@@ -1,93 +1,84 @@
+"""Repositorio de actuadores (SQL puro con psycopg2, sincrono)."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.actuator import Actuator, ActuatorCreate, ActuatorUpdate
-from typing import Optional, List
+from app.models.actuator import ActuatorCreate, ActuatorUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
+# JOIN con alias legibles: el frontend nunca necesita conocer ids.
+SELECT_ACTUATORS = """
+    SELECT a.*,
+           g.nombre AS greenhouse_nombre
+    FROM actuators a
+    JOIN greenhouses g ON a.greenhouse_id = g.id
+"""
+
 
 class ActuatorRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                """SELECT a.*, g.nombre as greenhouse_nombre
-                   FROM actuators a
-                   JOIN greenhouses g ON a.greenhouse_id = g.id
-                   WHERE a.estado = TRUE ORDER BY a.id ASC;"""
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_ACTUATORS + " WHERE a.estado = TRUE ORDER BY a.id ASC;"
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def obtener_por_id(self, actuator_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_ACTUATORS + " WHERE a.estado = TRUE AND a.id = %s;",
+                    (actuator_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
+
+    def obtener_por_greenhouse(self, greenhouse_id: int) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM actuators WHERE estado = TRUE AND greenhouse_id = %s "
+                    "ORDER BY id ASC;",
+                    (greenhouse_id,),
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def crear(self, actuator: ActuatorCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO actuators (greenhouse_id, tipo, nombre, ubicacion,
+                       estado_actuador, estado)
+                       VALUES (%s, %s, %s, %s, %s, %s) RETURNING id;""",
+                    (
+                        actuator.greenhouse_id,
+                        actuator.tipo,
+                        actuator.nombre,
+                        actuator.ubicacion,
+                        actuator.estado_actuador,
+                        actuator.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, actuator_id: int, actuator: ActuatorUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "actuators",
+                actuator.model_dump(exclude_unset=True),
+                actuator_id,
             )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
 
-    async def obtener_por_id(self, actuator_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """SELECT a.*, g.nombre as greenhouse_nombre
-                   FROM actuators a
-                   JOIN greenhouses g ON a.greenhouse_id = g.id
-                   WHERE a.estado = TRUE AND a.id = $1;""", actuator_id
-            )
-            return row
-        finally:
-            await self.db.release_connection(conn)
-
-    async def obtener_por_greenhouse(self, greenhouse_id: int) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                "SELECT * FROM actuators WHERE estado = TRUE AND greenhouse_id = $1 ORDER BY id ASC;", greenhouse_id
-            )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
-
-    async def crear(self, actuator: ActuatorCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO actuators (greenhouse_id, tipo, nombre, ubicacion, estado_actuador, estado)
-                   VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;""",
-                actuator.greenhouse_id, actuator.tipo, actuator.nombre,
-                actuator.ubicacion, actuator.estado_actuador, actuator.estado
-            )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
-
-    async def actualizar(self, actuator_id: int, actuator: ActuatorUpdate) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            fields = []
-            values = []
-            idx = 1
-
-            for field, value in [
-                ("greenhouse_id", actuator.greenhouse_id), ("tipo", actuator.tipo),
-                ("nombre", actuator.nombre), ("ubicacion", actuator.ubicacion),
-                ("estado_actuador", actuator.estado_actuador),
-                ("estado", actuator.estado)
-            ]:
-                if value is not None:
-                    fields.append(f"{field} = ${idx}"); values.append(value); idx += 1
-
-            if not fields:
-                return False
-
-            values.append(actuator_id)
-            query = f"UPDATE actuators SET {', '.join(fields)}, actualizado = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING id;"
-            result = await conn.fetchrow(query, *values)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def eliminar(self, actuator_id: int) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow("UPDATE actuators SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING id;", actuator_id)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
+    def eliminar(self, actuator_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "actuators", actuator_id)

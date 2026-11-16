@@ -1,76 +1,71 @@
+"""Repositorio de cultivos (SQL puro con psycopg2, sincrono)."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.crop import Crop, CropCreate, CropUpdate
-from typing import Optional, List
+from app.models.crop import CropCreate, CropUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
 
 class CropRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch("SELECT * FROM crops WHERE estado = TRUE ORDER BY id ASC;")
-            return rows
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM crops WHERE estado = TRUE ORDER BY id ASC;")
+                return [dict(fila) for fila in cur.fetchall()]
 
-    async def obtener_por_id(self, crop_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow("SELECT * FROM crops WHERE estado = TRUE AND id = $1;", crop_id)
-            return row
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_por_id(self, crop_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM crops WHERE estado = TRUE AND id = %s;",
+                    (crop_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-    async def crear(self, crop: CropCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO crops (nombre, nombre_cientifico, temperatura_min, temperatura_max,
-                   humedad_min, humedad_max, ph_min, ph_max, ciclo_dias, descripcion)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id;""",
-                crop.nombre, crop.nombre_cientifico, crop.temperatura_min, crop.temperatura_max,
-                crop.humedad_min, crop.humedad_max, crop.ph_min, crop.ph_max, crop.ciclo_dias,
-                crop.descripcion
+    def crear(self, crop: CropCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO crops (nombre, nombre_cientifico, temperatura_min,
+                       temperatura_max, humedad_min, humedad_max, ph_min, ph_max,
+                       ciclo_dias, descripcion, estado)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                       RETURNING id;""",
+                    (
+                        crop.nombre,
+                        crop.nombre_cientifico,
+                        crop.temperatura_min,
+                        crop.temperatura_max,
+                        crop.humedad_min,
+                        crop.humedad_max,
+                        crop.ph_min,
+                        crop.ph_max,
+                        crop.ciclo_dias,
+                        crop.descripcion,
+                        crop.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, crop_id: int, crop: CropUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "crops",
+                crop.model_dump(exclude_unset=True),
+                crop_id,
             )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
 
-    async def actualizar(self, crop_id: int, crop: CropUpdate) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            fields = []
-            values = []
-            idx = 1
-
-            for field, value in [
-                ("nombre", crop.nombre), ("nombre_cientifico", crop.nombre_cientifico),
-                ("temperatura_min", crop.temperatura_min), ("temperatura_max", crop.temperatura_max),
-                ("humedad_min", crop.humedad_min), ("humedad_max", crop.humedad_max),
-                ("ph_min", crop.ph_min), ("ph_max", crop.ph_max),
-                ("ciclo_dias", crop.ciclo_dias), ("descripcion", crop.descripcion)
-            ]:
-                if value is not None:
-                    fields.append(f"{field} = ${idx}"); values.append(value); idx += 1
-
-            if not fields:
-                return False
-
-            values.append(crop_id)
-            query = f"UPDATE crops SET {', '.join(fields)}, actualizado = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING id;"
-            result = await conn.fetchrow(query, *values)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def eliminar(self, crop_id: int) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow("UPDATE crops SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING id;", crop_id)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
+    def eliminar(self, crop_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "crops", crop_id)

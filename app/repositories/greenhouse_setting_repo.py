@@ -1,99 +1,119 @@
+"""Repositorio de parametros por invernadero (SQL puro con psycopg2, sincrono)."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.greenhouse_setting import GreenhouseSetting, GreenhouseSettingCreate, GreenhouseSettingUpdate
-from typing import Optional, List
+from app.models.greenhouse_setting import (
+    GreenhouseSettingCreate,
+    GreenhouseSettingUpdate,
+)
+from app.repositories.crud_utils import (
+    actualizar_generico,
+    actualizar_generico_por_campo,
+    eliminar_logico,
+    eliminar_logico_por_campo,
+)
+
+# JOIN con alias legibles: el frontend nunca necesita conocer ids.
+SELECT_GREENHOUSE_SETTINGS = """
+    SELECT gs.*,
+           g.nombre AS greenhouse_nombre
+    FROM greenhouse_settings gs
+    JOIN greenhouses g ON gs.greenhouse_id = g.id
+"""
+
 
 class GreenhouseSettingRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch(
-                """SELECT gs.*, g.nombre as greenhouse_nombre
-                   FROM greenhouse_settings gs
-                   JOIN greenhouses g ON gs.greenhouse_id = g.id
-                   WHERE gs.estado = TRUE ORDER BY gs.id ASC;"""
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_GREENHOUSE_SETTINGS
+                    + " WHERE gs.estado = TRUE ORDER BY gs.id ASC;"
+                )
+                return [dict(fila) for fila in cur.fetchall()]
+
+    def obtener_por_id(self, setting_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_GREENHOUSE_SETTINGS
+                    + " WHERE gs.estado = TRUE AND gs.id = %s;",
+                    (setting_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
+
+    def obtener_por_greenhouse(self, greenhouse_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    SELECT_GREENHOUSE_SETTINGS
+                    + " WHERE gs.estado = TRUE AND gs.greenhouse_id = %s;",
+                    (greenhouse_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
+
+    def crear(self, setting: GreenhouseSettingCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO greenhouse_settings (greenhouse_id, temp_min, temp_max,
+                       humedad_min, humedad_max, luz_min, ph_min, ph_max,
+                       intervalo_lectura_minutos, estado)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id;""",
+                    (
+                        setting.greenhouse_id,
+                        setting.temp_min,
+                        setting.temp_max,
+                        setting.humedad_min,
+                        setting.humedad_max,
+                        setting.luz_min,
+                        setting.ph_min,
+                        setting.ph_max,
+                        setting.intervalo_lectura_minutos,
+                        setting.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, setting_id: int, setting: GreenhouseSettingUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "greenhouse_settings",
+                setting.model_dump(exclude_unset=True),
+                setting_id,
             )
-            return rows
-        finally:
-            await self.db.release_connection(conn)
 
-    async def obtener_por_id(self, setting_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """SELECT gs.*, g.nombre as greenhouse_nombre
-                   FROM greenhouse_settings gs
-                   JOIN greenhouses g ON gs.greenhouse_id = g.id
-                   WHERE gs.estado = TRUE AND gs.id = $1;""", setting_id
-            )
-            return row
-        finally:
-            await self.db.release_connection(conn)
-
-    async def obtener_por_greenhouse(self, greenhouse_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                "SELECT * FROM greenhouse_settings WHERE estado = TRUE AND greenhouse_id = $1;", greenhouse_id
-            )
-            return row
-        finally:
-            await self.db.release_connection(conn)
-
-    async def crear(self, setting: GreenhouseSettingCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO greenhouse_settings (greenhouse_id, temp_min, temp_max, humedad_min,
-                   humedad_max, luz_min, ph_min, ph_max, intervalo_lectura_minutos)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id;""",
-                setting.greenhouse_id, setting.temp_min, setting.temp_max, setting.humedad_min,
-                setting.humedad_max, setting.luz_min, setting.ph_min, setting.ph_max,
-                setting.intervalo_lectura_minutos
-            )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
-
-    async def actualizar(self, greenhouse_id: int, setting: GreenhouseSettingUpdate) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            fields = []
-            values = []
-            idx = 1
-
-            for field, value in [
-                ("temp_min", setting.temp_min), ("temp_max", setting.temp_max),
-                ("humedad_min", setting.humedad_min), ("humedad_max", setting.humedad_max),
-                ("luz_min", setting.luz_min), ("ph_min", setting.ph_min),
-                ("ph_max", setting.ph_max), ("intervalo_lectura_minutos", setting.intervalo_lectura_minutos)
-            ]:
-                if value is not None:
-                    fields.append(f"{field} = ${idx}"); values.append(value); idx += 1
-
-            if not fields:
-                return False
-
-            values.append(greenhouse_id)
-            query = f"UPDATE greenhouse_settings SET {', '.join(fields)}, actualizado = CURRENT_TIMESTAMP WHERE greenhouse_id = ${idx} RETURNING id;"
-            result = await conn.fetchrow(query, *values)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def eliminar_por_greenhouse(self, greenhouse_id: int) -> bool:
-        """Eliminacion logica: estado = FALSE."""
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                "UPDATE greenhouse_settings SET estado = FALSE, actualizado = CURRENT_TIMESTAMP "
-                "WHERE greenhouse_id = $1 AND estado = TRUE RETURNING id;",
+    def actualizar_por_greenhouse(
+        self, greenhouse_id: int, setting: GreenhouseSettingUpdate
+    ) -> bool:
+        """Actualiza los parametros del invernadero indicado."""
+        with self.db.get_connection() as conn:
+            return actualizar_generico_por_campo(
+                conn,
+                "greenhouse_settings",
+                "greenhouse_id",
                 greenhouse_id,
+                setting.model_dump(exclude_unset=True),
             )
-            return row is not None
-        finally:
-            await self.db.release_connection(conn)
+
+    def eliminar(self, setting_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "greenhouse_settings", setting_id)
+
+    def eliminar_por_greenhouse(self, greenhouse_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico_por_campo(
+                conn, "greenhouse_settings", "greenhouse_id", greenhouse_id
+            )

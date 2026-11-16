@@ -1,8 +1,10 @@
 from datetime import timedelta
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from psycopg2.extras import RealDictCursor
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 from app.core.auth import (
     create_access_token,
@@ -10,10 +12,14 @@ from app.core.auth import (
     get_password_hash,
     verify_password,
 )
-from app.core.database import Database
+from app.models.user import UserCreate
+from app.repositories.user_repo import UserRepository
 
 router = APIRouter(prefix="/auth", tags=["Autenticacion"])
-db = Database()
+repo = UserRepository()
+
+# Rol mas restringido: todo registro publico entra como 'lector'.
+ROL_POR_DEFECTO = "lector"
 
 
 class Token(BaseModel):
@@ -21,34 +27,29 @@ class Token(BaseModel):
     token_type: str
 
 
-class UserCreate(BaseModel):
+class RegistroUsuario(BaseModel):
+    """Datos del registro publico. El rol no lo elige el cliente."""
+
+    model_config = ConfigDict(extra="forbid")
+
     username: str
-    email: str
+    email: EmailStr
     password: str
     nombre: str
-    rol_id: int = 2
 
 
 class UserResponse(BaseModel):
     id: int
     username: str
     email: str
-    nombre: str
-    rol_id: int
+    nombre: Optional[str] = None
+    rol: Optional[str] = None
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """Autentica un usuario y retorna un token JWT."""
-    conn = await db.get_connection()
-    try:
-        user = await conn.fetchrow(
-            "SELECT id, username, password_hash, rol_id, estado "
-            "FROM usuario WHERE username = $1",
-            form_data.username,
-        )
-    finally:
-        await db.release_connection(conn)
+    user = repo.obtener_credenciales_por_username(form_data.username)
 
     if not user:
         raise HTTPException(
@@ -57,30 +58,21 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not user["estado"]:
+    if not user.get("estado"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuario inactivo",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not verify_password(form_data.password, user["password_hash"]):
+    if not verify_password(form_data.password, user.get("password_hash") or ""):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    conn2 = await db.get_connection()
-    try:
-        rol_row = await conn2.fetchrow(
-            "SELECT nombre FROM rol WHERE id = $1",
-            user["rol_id"],
-        )
-        rol_nombre = rol_row["nombre"] if rol_row else "readonly"
-    finally:
-        await db.release_connection(conn2)
-
+    rol_nombre = user.get("rol_nombre") or ROL_POR_DEFECTO
     access_token = create_access_token(
         data={
             "sub": str(user["id"]),
@@ -93,79 +85,78 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate):
-    """Registra un nuevo usuario."""
-    conn = await db.get_connection()
-    try:
-        existing = await conn.fetchrow(
-            "SELECT id FROM usuario WHERE username = $1 OR email = $2",
-            user_data.username,
-            user_data.email,
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
+def register(user_data: RegistroUsuario):
+    """Registra un nuevo usuario. El rol lo asigna el backend (`lector`)."""
+    if repo.obtener_por_username(user_data.username):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El username ya esta registrado",
         )
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El username o email ya estan registrados",
-            )
 
-        password_hash = get_password_hash(user_data.password)
-        # El rol no lo elige el cliente: todo registro publico entra como 'operador'.
-        rol_id = await conn.fetchval("SELECT id FROM rol WHERE nombre = 'operador' AND estado = TRUE;")
-
-        row = await conn.fetchrow(
-            "INSERT INTO usuario (username, email, password_hash, nombre, rol_id, estado) "
-            "VALUES ($1, $2, $3, $4, $5, TRUE) "
-            "RETURNING id, username, email, nombre, rol_id",
-            user_data.username,
-            user_data.email,
-            password_hash,
-            user_data.nombre,
-            rol_id,
+    rol = repo.obtener_por_rol(ROL_POR_DEFECTO)
+    if not rol:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"El rol '{ROL_POR_DEFECTO}' no esta configurado en la base de datos",
         )
-    finally:
-        await db.release_connection(conn)
 
-    return UserResponse(**row)
+    nuevo_id = repo.crear(
+        UserCreate(
+            username=user_data.username,
+            email=user_data.email,
+            password=user_data.password,
+            nombre=user_data.nombre,
+            rol_id=rol["id"],
+        )
+    )
+
+    return UserResponse(
+        id=nuevo_id,
+        username=user_data.username,
+        email=user_data.email,
+        nombre=user_data.nombre,
+        rol=ROL_POR_DEFECTO,
+    )
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user: dict = Depends(get_current_user)):
-    """Retorna la informacion del usuario autenticado."""
-    conn = await db.get_connection()
-    try:
-        user = await conn.fetchrow(
-            "SELECT id, username, email, nombre, rol_id "
-            "FROM usuario WHERE id = $1",
-            int(current_user["sub"]),
-        )
-    finally:
-        await db.release_connection(conn)
-
+def me(current_user: dict = Depends(get_current_user)):
+    """Informacion del usuario autenticado (nunca su hash de contrasena)."""
+    user = repo.obtener_por_id(int(current_user["sub"]))
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuario no encontrado",
         )
 
-    return UserResponse(**user)
+    return UserResponse(
+        id=user["id"],
+        username=user["username"],
+        email=user["email"],
+        nombre=user.get("nombre"),
+        rol=user.get("rol_nombre") or current_user.get("rol"),
+    )
 
 
 @router.get("/modulos")
-async def modulos_del_rol(current_user: dict = Depends(get_current_user)):
+def modulos_del_rol(current_user: dict = Depends(get_current_user)):
     """Modulos a los que tiene acceso el rol del usuario (tabla moduloxrol)."""
-    conn = await db.get_connection()
-    try:
-        rows = await conn.fetch(
-            "SELECT m.nombre, m.descripcion, mr.puede_ver, mr.puede_crear, "
-            "mr.puede_editar, mr.puede_eliminar "
-            "FROM moduloxrol mr "
-            "JOIN rol r ON r.id = mr.rol_id "
-            "JOIN modulo m ON m.id = mr.modulo_id "
-            "WHERE r.nombre = $1 AND mr.estado = TRUE AND r.estado = TRUE AND m.estado = TRUE "
-            "AND mr.puede_ver = TRUE ORDER BY m.id;",
-            current_user.get("rol"),
-        )
-        return [dict(r) for r in rows]
-    finally:
-        await db.release_connection(conn)
+    db = repo.db
+    with db.get_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                "SELECT m.nombre, m.descripcion, mr.puede_ver, mr.puede_crear, "
+                "mr.puede_editar, mr.puede_eliminar "
+                "FROM moduloxrol mr "
+                "JOIN rol r ON r.id = mr.rol_id "
+                "JOIN modulo m ON m.id = mr.modulo_id "
+                "WHERE r.nombre = %s AND mr.estado = TRUE AND r.estado = TRUE "
+                "AND m.estado = TRUE AND mr.puede_ver = TRUE ORDER BY m.id;",
+                (current_user.get("rol"),),
+            )
+            filas = cur.fetchall()
+
+    return [dict(fila) for fila in filas]

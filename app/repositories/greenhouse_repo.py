@@ -1,75 +1,65 @@
+"""Repositorio de invernaderos (SQL puro con psycopg2, sincrono)."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from psycopg2.extras import RealDictCursor
+
 from app.core.database import Database
-from app.models.greenhouse import Greenhouse, GreenhouseCreate, GreenhouseUpdate
-from typing import Optional, List
+from app.models.greenhouse import GreenhouseCreate, GreenhouseUpdate
+from app.repositories.crud_utils import actualizar_generico, eliminar_logico
+
 
 class GreenhouseRepository:
-    def __init__(self):
+    def __init__(self) -> None:
         self.db = Database()
 
-    async def obtener_todos(self) -> List:
-        conn = await self.db.get_connection()
-        try:
-            rows = await conn.fetch("SELECT * FROM greenhouses WHERE estado = TRUE ORDER BY id ASC;")
-            return rows
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_todos(self) -> list[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM greenhouses WHERE estado = TRUE ORDER BY id ASC;"
+                )
+                return [dict(fila) for fila in cur.fetchall()]
 
-    async def obtener_por_id(self, greenhouse_id: int):
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow("SELECT * FROM greenhouses WHERE estado = TRUE AND id = $1;", greenhouse_id)
-            return row
-        finally:
-            await self.db.release_connection(conn)
+    def obtener_por_id(self, greenhouse_id: int) -> Optional[dict]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM greenhouses WHERE estado = TRUE AND id = %s;",
+                    (greenhouse_id,),
+                )
+                fila = cur.fetchone()
+                return dict(fila) if fila else None
 
-    async def crear(self, greenhouse: GreenhouseCreate) -> int:
-        conn = await self.db.get_connection()
-        try:
-            row = await conn.fetchrow(
-                """INSERT INTO greenhouses (nombre, ubicacion, area_metros_cuadrados, capacidad_maxima, estado)
-                   VALUES ($1, $2, $3, $4, $5) RETURNING id;""",
-                greenhouse.nombre, greenhouse.ubicacion, greenhouse.area_metros_cuadrados,
-                greenhouse.capacidad_maxima, greenhouse.estado
+    def crear(self, greenhouse: GreenhouseCreate) -> Optional[int]:
+        with self.db.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    """INSERT INTO greenhouses (nombre, ubicacion, area_metros_cuadrados,
+                       capacidad_maxima, estado)
+                       VALUES (%s, %s, %s, %s, %s) RETURNING id;""",
+                    (
+                        greenhouse.nombre,
+                        greenhouse.ubicacion,
+                        greenhouse.area_metros_cuadrados,
+                        greenhouse.capacidad_maxima,
+                        greenhouse.estado,
+                    ),
+                )
+                fila = cur.fetchone()
+                return fila["id"] if fila else None
+
+    def actualizar(self, greenhouse_id: int, greenhouse: GreenhouseUpdate) -> bool:
+        with self.db.get_connection() as conn:
+            return actualizar_generico(
+                conn,
+                "greenhouses",
+                greenhouse.model_dump(exclude_unset=True),
+                greenhouse_id,
             )
-            await conn.execute("COMMIT;")
-            return row['id']
-        finally:
-            await self.db.release_connection(conn)
 
-    async def actualizar(self, greenhouse_id: int, greenhouse: GreenhouseUpdate) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            fields = []
-            values = []
-            idx = 1
-
-            if greenhouse.nombre is not None:
-                fields.append(f"nombre = ${idx}"); values.append(greenhouse.nombre); idx += 1
-            if greenhouse.ubicacion is not None:
-                fields.append(f"ubicacion = ${idx}"); values.append(greenhouse.ubicacion); idx += 1
-            if greenhouse.area_metros_cuadrados is not None:
-                fields.append(f"area_metros_cuadrados = ${idx}"); values.append(greenhouse.area_metros_cuadrados); idx += 1
-            if greenhouse.capacidad_maxima is not None:
-                fields.append(f"capacidad_maxima = ${idx}"); values.append(greenhouse.capacidad_maxima); idx += 1
-            if greenhouse.estado is not None:
-                fields.append(f"estado = ${idx}"); values.append(greenhouse.estado); idx += 1
-
-            if not fields:
-                return False
-
-            values.append(greenhouse_id)
-            query = f"UPDATE greenhouses SET {', '.join(fields)}, actualizado = CURRENT_TIMESTAMP WHERE id = ${idx} RETURNING id;"
-            result = await conn.fetchrow(query, *values)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
-
-    async def eliminar(self, greenhouse_id: int) -> bool:
-        conn = await self.db.get_connection()
-        try:
-            result = await conn.fetchrow("UPDATE greenhouses SET estado = FALSE, actualizado = CURRENT_TIMESTAMP WHERE id = $1 AND estado = TRUE RETURNING id;", greenhouse_id)
-            await conn.execute("COMMIT;")
-            return result is not None
-        finally:
-            await self.db.release_connection(conn)
+    def eliminar(self, greenhouse_id: int) -> bool:
+        with self.db.get_connection() as conn:
+            return eliminar_logico(conn, "greenhouses", greenhouse_id)
