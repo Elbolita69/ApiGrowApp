@@ -459,16 +459,99 @@ Cubren:
 
 ## Despliegue
 
-### Render.com
+El proyecto tiene dos piezas que se despliegan por separado en Render:
 
-| Servicio | Root Directory | Build | Start |
-|---|---|---|---|
-| API principal | (vacio) | `pip install -r requirements.txt` | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
-| Frontend | `frontend` | `npm install && npm run build` | sitio estatico, publish `build` |
+- **La API** (FastAPI + PostgreSQL en Neon) -> Web Service
+- **El frontend** (SvelteKit) -> Static Site
 
-Variables de la API: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL=true`, `SECRET_KEY` y `CORS_ORIGINS` con la URL del frontend.
+La base de datos ya esta en Neon, asi que solo se despliega el codigo.
 
-En el frontend, si se publica como sitio estatico, define `VITE_API_URL` y `VITE_EXPRESS_URL` con las URLs publicas y agrega la regla de reescritura `/*` -> `/index.html`.
+### 1. La API en Render (Web Service)
+
+En <https://dashboard.render.com> → **New → Web Service** → conecta el repositorio.
+
+| Campo | Valor |
+|---|---|
+| Name | `apigrowapp` (o el que quieras) |
+| Root Directory | *(vacio)* |
+| Runtime | Python |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+| Instance Type | Free (o Starter) |
+
+> **Nunca pongas `--reload` en el Start Command de Render**: es solo para desarrollo local. Con `--reload` Render reinicia el proceso en cada cambio y el servicio se cae.
+
+#### Variables de entorno de la API
+
+En *Environment* del servicio, agrega estas variables (los valores de Neon los copias de *Neon → Dashboard → Connection Details*):
+
+| Variable | Valor | Nota |
+|---|---|---|
+| `DB_HOST` | `ep-xxxxxxxx-pooler.c-9.us-east-2.aws.neon.tech` | **Usa el host con `-pooler`**: es el que aguanta muchas conexiones |
+| `DB_PORT` | `5432` | |
+| `DB_NAME` | `neondb` | |
+| `DB_USER` | `neondb_owner` | |
+| `DB_PASSWORD` | *(la de Neon)* | |
+| `DB_SSL` | `true` | Obligatorio en Neon |
+| `SECRET_KEY` | *(clave larga y aleatoria)* | Genera una con `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
+| `CORS_ORIGINS` | `https://tu-frontend.onrender.com` | Se agrega despues de crear el frontend |
+| `DB_POOL_MIN` | `10` | Conexiones precreadas (opcional, valor por defecto 5) |
+| `DB_POOL_MAX` | `15` | Conexiones maximas simultaneas (opcional) |
+
+Render lee esas variables desde su panel: **no hace falta el archivo `.env`** en el servidor.
+
+#### Comprobar que la API quedo viva
+
+Abre `https://tu-api.onrender.com/health` → debe responder `{"status":"healthy"}`.
+Y `https://tu-api.onrender.com/docs` → la documentacion interactiva.
+
+> **Primer arranque**: Render hace el build la primera vez y tarda unos minutos. Ademas, el plan gratuito se duerme tras 15 minutos sin uso: la primera peticion despues de dormir tarda un poco mas (arranque en frio). El pool de conexiones ya se precalienta al arrancar para que las peticiones siguientes sean rapidas.
+
+### 2. El frontend en Render (Static Site)
+
+En <https://dashboard.render.com> → **New → Static Site** → conecta el mismo repositorio.
+
+| Campo | Valor |
+|---|---|
+| Name | `growapp` |
+| Root Directory | `frontend` |
+| Build Command | `npm install && npm run build` |
+| Publish Path | `build` |
+
+Agrega en *Environment*:
+
+| Variable | Valor |
+|---|---|
+| `VITE_API_URL` | `https://tu-api.onrender.com` |
+
+Y en *Settings → Redirects/Headers* agrega la regla de reescritura:
+
+| Source | Destination | Status |
+|---|---|---|
+| `/*` | `/index.html` | 200 (Rewrite) |
+
+> **Las variables `VITE_*` se leen al compilar**, no al servir. Si cambias `VITE_API_URL`, tienes que guardar y volver a compilar el sitio para que el cambio tome efecto.
+
+La URL publica del frontend te sirve para completar `CORS_ORIGINS` en la API (y volver a desplegar la API si la cambias).
+
+### 3. La API auxiliar (opcional)
+
+Si la despliegas, en Render como otro Web Service con Root Directory `express-api`, Build `npm install`, Start `npm start`, y la variable `MYSQL_URL` apuntando a tu MySQL de Railway.
+
+### 4. Orden recomendado
+
+1. Despliega la API → anota `https://tu-api.onrender.com`.
+2. Despliega el frontend con `VITE_API_URL` = esa URL → anota `https://tu-frontend.onrender.com`.
+3. Vuelve a la API y pon `CORS_ORIGINS=https://tu-frontend.onrender.com` → Render la reinicia sola.
+4. Abre el frontend, entra con `admin` / `Admin123*` y prueba el Asistente.
+
+### Comprobacion final en produccion
+
+```powershell
+curl.exe https://tu-api.onrender.com/health
+curl.exe -X POST -d "username=admin&password=Admin123*" https://tu-api.onrender.com/auth/login
+curl.exe https://tu-frontend.onrender.com
+```
 
 ---
 

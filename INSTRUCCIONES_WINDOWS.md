@@ -24,6 +24,7 @@ Documento de arranque para el PC con Windows 10/11. Todo lo que aparece aquí es
 12. [Problemas frecuentes](#12-problemas-frecuentes)
 13. [Cómo volver a levantar el proyecto otro día](#13-cómo-volver-a-levantar-el-proyecto-otro-día)
 14. [Dónde está cada cosa](#14-dónde-está-cada-cosa)
+15. [Publicarlo en Render](#15-publicarlo-en-render)
 
 ---
 
@@ -557,3 +558,84 @@ ApiGrowApp-main/
 3. Revisa la sección [Problemas frecuentes](#12-problemas-frecuentes).
 
 Los logs quedan en la terminal donde se levantó cada servicio.
+
+---
+
+## 15. Publicarlo en Render
+
+La base de datos ya está en **Neon** (completa con tus credenciales). En Render solo se publica el código, en dos servicios.
+
+### 15.1 La API (Web Service)
+
+En <https://dashboard.render.com> → **New → Web Service** → conecta el repositorio.
+
+| Campo | Valor |
+|---|---|
+| Root Directory | *(vacío)* |
+| Runtime | Python |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn main:app --host 0.0.0.0 --port $PORT` |
+
+> **Ojo:** en el Start Command **no** pongas `--reload`. Eso es solo para tu PC.
+
+En *Environment* agrega estas variables con los datos de Neon:
+
+```
+DB_HOST=ep-xxxxxxxx-pooler.c-9.us-east-2.aws.neon.tech
+DB_PORT=5432
+DB_NAME=neondb
+DB_USER=neondb_owner
+DB_PASSWORD=la_de_neon
+DB_SSL=true
+SECRET_KEY=una_clave_larga_y_aleatoria
+CORS_ORIGINS=https://tu-frontend.onrender.com
+DB_POOL_MIN=10
+DB_POOL_MAX=15
+```
+
+- Usa el host **con `-pooler`**: es el que aguanta varias conexiones simultáneas.
+- `SECRET_KEY` la generas con `python -c "import secrets; print(secrets.token_urlsafe(48))"`.
+- `CORS_ORIGINS` lo completas en el paso 15.2.
+
+Comprueba que quedó viva: <https://tu-api.onrender.com/health> → `{"status":"healthy"}`
+
+### 15.2 El frontend (Static Site)
+
+En <https://dashboard.render.com> → **New → Static Site** → mismo repositorio.
+
+| Campo | Valor |
+|---|---|
+| Root Directory | `frontend` |
+| Build Command | `npm install && npm run build` |
+| Publish Path | `build` |
+
+En *Environment*:
+
+```
+VITE_API_URL=https://tu-api.onrender.com
+```
+
+En *Settings → Redirects/Headers* agrega la regla:
+
+| Source | Destination | Status |
+|---|---|---|
+| `/*` | `/index.html` | 200 (Rewrite) |
+
+> Las variables `VITE_*` se leen **al compilar**. Si las cambias, hay que recompilar el sitio.
+
+### 15.3 El orden completo
+
+1. Despliega la **API** → anota `https://tu-api.onrender.com`
+2. Despliega el **frontend** con `VITE_API_URL` = esa URL → anota `https://tu-frontend.onrender.com`
+3. Vuelve a la **API** y pon `CORS_ORIGINS=https://tu-frontend.onrender.com`
+4. Abre el frontend y entra con `admin` / `Admin123*`
+
+### 15.4 Comprobar desde tu PC
+
+```powershell
+curl.exe https://tu-api.onrender.com/health
+curl.exe -X POST -d "username=admin&password=Admin123*" https://tu-api.onrender.com/auth/login
+curl.exe https://tu-frontend.onrender.com
+```
+
+> El plan gratuito de Render se duerme tras 15 minutos sin uso: la primera petición después de dormir tarda más (arranque en frío). No es un error.

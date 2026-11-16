@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
@@ -22,11 +23,31 @@ from app.api import (
     rutas_sensors,
     rutas_users,
 )
+from app.core.database import Database
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Precalienta el pool de conexiones al arrancar.
+
+    En una base en la nube (Neon) abrir una conexion tarda ~0.6 s. Sin esto,
+    la primera peticion del usuario paga ese tiempo. Si la base no esta
+    disponible, la API arranca igual y cada peticion lo intentara de nuevo.
+    """
+    db = Database()
+    try:
+        db.precalentar()
+    except Exception:  # pragma: no cover - la base puede no estar lista aun
+        pass
+    yield
+    db.close_pool()
+
 
 app = FastAPI(
     title="Invernadero Inteligente API",
     description="API REST para la gestión de invernaderos inteligentes con sensores, cultivos, riego y más.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
