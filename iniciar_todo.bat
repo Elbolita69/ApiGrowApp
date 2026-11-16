@@ -61,7 +61,7 @@ echo.
 
 REM --- 3. Levantar la API en su propia ventana ------------------------
 echo Levantando la API en http://localhost:8000 ...
-start "GrowApp - API" cmd /k "cd /d "%~dp0" && ".venv\Scripts\python.exe" -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+start "GrowApp - API" cmd /k call "%~dp0scripts\api_local.bat"
 
 REM --- 4. Esperar a que la API responda ------------------------------
 echo Esperando a que la API este lista...
@@ -69,7 +69,7 @@ timeout /t 12 /nobreak >nul
 
 REM --- 5. Levantar el frontend en su propia ventana -------------------
 echo Levantando el frontend en http://localhost:5173 ...
-start "GrowApp - Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
+start "GrowApp - Frontend" cmd /k call "%~dp0scripts\frontend_local.bat"
 
 REM --- 6. Abrir el navegador -----------------------------------------
 timeout /t 12 /nobreak >nul
