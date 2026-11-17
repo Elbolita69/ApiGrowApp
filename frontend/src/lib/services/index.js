@@ -1,12 +1,3 @@
-// Capa unica de acceso a la API. Las rutas y los componentes NUNCA usan `fetch`:
-// siempre importan desde aqui.
-//
-//   import { auth } from '#lib/services/index.js';
-//   const modulos = await auth.modulos();
-//
-//   import { listar } from '#lib/services/crops.js';
-//   const cultivos = await listar();
-
 export { request, BASE_FASTAPI, BASE_EXPRESS } from './api.js';
 
 export * as auth from './auth.js';
@@ -44,21 +35,6 @@ import * as roles from './roles.js';
 import * as estudiantes from './estudiantes.js';
 import * as externos from './externos.js';
 
-/**
- * Servicio CRUD de un modulo (las mismas cinco operaciones en todos los dominios).
- * @typedef {Object} ServicioCrud
- * @property {() => Promise<any>} listar
- * @property {(id: number|string) => Promise<any>} obtener
- * @property {(datos: Record<string, any>) => Promise<any>} crear
- * @property {(id: number|string, datos: Record<string, any>) => Promise<any>} actualizar
- * @property {(id: number|string) => Promise<any>} eliminar
- */
-
-/**
- * Servicio de cada modulo, indexado por la clave del modulo (ver config/modulos.js).
- * Lo usa CrudPage para no repetir URLs ni metodos HTTP en cada pagina.
- * @type {Record<string, ServicioCrud>}
- */
 export const serviciosPorModulo = {
 	greenhouses,
 	sensors,

@@ -1,5 +1,3 @@
-"""Autenticacion JWT y permisos por rol (moduloxrol), sincronos con psycopg2."""
-
 from __future__ import annotations
 
 import logging
@@ -18,15 +16,12 @@ from psycopg2.extras import RealDictCursor
 
 logger = logging.getLogger(__name__)
 
-# El .env vive en la raiz del proyecto (app/core/auth.py -> app/core -> app -> raiz)
 BASE_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(BASE_DIR / ".env")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
-# Sin SECRET_KEY se genera una clave aleatoria en memoria: el arranque no se
-# rompe, pero los tokens no sobreviven a un reinicio del proceso.
 _secreto = os.getenv("SECRET_KEY")
 if not _secreto:
     _secreto = secrets.token_urlsafe(48)
@@ -39,7 +34,6 @@ SECRET_KEY = _secreto
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Accion del CRUD -> columna de permiso en la tabla moduloxrol
 _ACCIONES = {
     "ver": "puede_ver",
     "crear": "puede_crear",
@@ -48,9 +42,7 @@ _ACCIONES = {
 }
 
 
-# ----------------------------------------------------------------- passwords
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifica una contrasena en texto plano contra su hash bcrypt."""
     try:
         return bcrypt.checkpw(
             plain_password.encode("utf-8"), hashed_password.encode("utf-8")
@@ -60,15 +52,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def get_password_hash(password: str) -> str:
-    """Genera el hash bcrypt de una contrasena."""
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
-# --------------------------------------------------------------------- JWT
 def create_access_token(
     data: dict, expires_delta: Optional[timedelta] = None
 ) -> str:
-    """Crea un token JWT HS256 con los claims sub, username, rol y exp."""
     contenido = data.copy()
     if expires_delta:
         expira = datetime.now(timezone.utc) + expires_delta
@@ -79,16 +68,13 @@ def create_access_token(
 
 
 def decode_token(token: str) -> Optional[dict]:
-    """Decodifica y valida un token JWT. Devuelve None si no es valido."""
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         return None
 
 
-# -------------------------------------------------------------- dependencias
 def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
-    """Dependencia FastAPI: usuario autenticado a partir del token Bearer."""
     credenciales_invalidas = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudo validar las credenciales",
@@ -103,7 +89,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
 
 
 def get_current_user_id(current_user: dict = Depends(get_current_user)) -> int:
-    """Devuelve el id numerico del usuario autenticado (claim `sub`)."""
     try:
         return int(current_user["sub"])
     except (KeyError, TypeError, ValueError):
@@ -115,8 +100,6 @@ def get_current_user_id(current_user: dict = Depends(get_current_user)) -> int:
 
 
 def verify_rol(required_rol: str):
-    """Devuelve una dependencia FastAPI que exige un rol concreto (por nombre)."""
-
     def rol_checker(current_user: dict = Depends(get_current_user)) -> dict:
         if current_user.get("rol") != required_rol:
             raise HTTPException(
@@ -128,27 +111,19 @@ def verify_rol(required_rol: str):
     return rol_checker
 
 
-# ------------------------------------------------------------------ permisos
 _db = None
 
 
 def _get_db():
-    """Una sola instancia (y un solo pool de conexiones) para validar permisos."""
     global _db
     if _db is None:
-        from app.core.database import Database  # import local para evitar ciclos
+        from app.core.database import Database
 
         _db = Database()
     return _db
 
 
 def require_permission(modulo: str, accion: str):
-    """Dependencia FastAPI: valida el JWT y comprueba en `moduloxrol` que el rol
-    del usuario tenga permiso (ver/crear/editar/eliminar) sobre el modulo.
-
-    La consulta es sincrona (psycopg2) y exige que el permiso y el estado
-    esten activos en `moduloxrol`, `rol` y `modulo`.
-    """
     columna = _ACCIONES[accion]
     sql = (
         f"SELECT mr.{columna} AS permitido "

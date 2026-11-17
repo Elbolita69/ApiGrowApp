@@ -14,14 +14,10 @@ class EstudianteBase(BaseModel):
 
 
 class EstudianteCreate(EstudianteBase):
-    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class EstudianteUpdate(BaseModel):
-    """Actualizacion parcial: sin `id` ni campos primary key editables."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     nombre: Optional[str] = None
@@ -30,14 +26,10 @@ class EstudianteUpdate(BaseModel):
 
 
 class Estudiante(EstudianteBase):
-    """Datos del estudiante. No acepta `id`: lo asigna la base de datos."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class EstudianteResponse(EstudianteBase):
-    """Modelo de lectura: incluye la auditoria."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

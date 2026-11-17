@@ -1,5 +1,3 @@
-"""Repositorios de la aplicacion (capa de datos sincrona con psycopg2)."""
-
 from app.repositories.greenhouse_repo import GreenhouseRepository
 from app.repositories.sensor_repo import SensorRepository
 from app.repositories.sensor_reading_repo import SensorReadingRepository

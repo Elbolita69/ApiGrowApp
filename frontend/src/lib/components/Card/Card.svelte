@@ -1,8 +1,4 @@
 <script>
-	/**
-	 * Tarjeta reutilizable: titulo, icono y espacio para el contenido (y un pie opcional).
-	 * @type {{titulo?: string, subtitulo?: string, icono?: string, children?: import('svelte').Snippet, pie?: import('svelte').Snippet}}
-	 */
 	let { titulo = '', subtitulo = '', icono = '', children, pie } = $props();
 </script>
 

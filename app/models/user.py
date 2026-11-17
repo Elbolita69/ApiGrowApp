@@ -15,19 +15,12 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    """Datos de entrada: sin `id` y sin `password_hash` (lo genera el backend)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     password: str
 
 
 class UserUpdate(BaseModel):
-    """Actualizacion parcial: sin `id`.
-
-    `rol_id` solo lo puede cambiar un administrador (se valida en el router).
-    """
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     username: Optional[str] = None
@@ -38,8 +31,6 @@ class UserUpdate(BaseModel):
 
 
 class User(UserBase):
-    """Modelo de lectura: incluye la auditoria y nunca expone el hash."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

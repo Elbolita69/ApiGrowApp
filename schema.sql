@@ -1,31 +1,3 @@
--- ==========================================================================
--- ApiGrowApp - Esquema de base de datos
--- Motor: PostgreSQL 15 (destino Neon)
--- Descripcion: greenhouse inteligente con invernaderos, sensores, riego,
---             actuadores, alertas, catalogo de cultivos y control de acceso
---              por roles y modulos (matriz moduloxrol).
---
--- Reglas del contrato:
---   * 16 tablas, todas con auditoria: creado, actualizado y estado.
---   * 'estado' es el BORRADO LOGICO: TRUE = registro activo, FALSE = eliminado.
---     El borrado fisico esta prohibido; la API solo hace UPDATE ... SET estado = FALSE.
---   * Trigger set_actualizado() BEFORE UPDATE sobre las 16 tablas.
---   * El archivo es idempotente: se puede ejecutar varias veces sobre la misma base.
---
--- Semillas incluidas: 10 roles, 16 modulos, matriz de permisos, 21 usuarios
---   (hash bcrypt reales, coste 12) y datos operativos de 20 invernaderos,
---   20 cultivos, 20 sensores, 60 lecturas, 20 lotes, 40 alertas, 20 zonas de
---   riego, 20 riegos, 20 actuadores, 20 controles, 20 configuraciones y
---   10 estudiantes.
--- ==========================================================================
-
-
--- ==========================================================================
--- SECCION 0. LIMPIEZA IDEMPOTENTE (DROP TABLE ... CASCADE)
--- ==========================================================================
--- Las tablas se eliminan en orden de dependencia inverso (primero las que
--- dependen de otras). Se usa CASCADE para no dejar dependencias huerfanas.
--- Nunca se elimina la base de datos ni el esquema: solo las tablas del modelo.
 DROP TABLE IF EXISTS actuator_controls CASCADE;
 DROP TABLE IF EXISTS actuators CASCADE;
 DROP TABLE IF EXISTS irrigation_logs CASCADE;
@@ -43,45 +15,28 @@ DROP TABLE IF EXISTS modulo CASCADE;
 DROP TABLE IF EXISTS rol CASCADE;
 DROP TABLE IF EXISTS greenhouses CASCADE;
 
--- La funcion del trigger se recrea en la seccion 2 (queda sin dependencias
--- porque las tablas anteriores fueron eliminadas con sus triggers).
 DROP FUNCTION IF EXISTS set_actualizado();
 
-
--- ==========================================================================
--- SECCION 1. DDL - ESTRUCTURA DE TABLAS (16 tablas)
--- ==========================================================================
--- Convencion de auditoria, presente en las 16 tablas:
---   estado      BOOLEAN    -> borrado logico (TRUE activo / FALSE eliminado)
---   creado      TIMESTAMP  -> fecha de creacion del registro
---   actualizado TIMESTAMP  -> fecha de la ultima actualizacion (trigger)
--- Las llaves foraneas usan ON DELETE CASCADE, salvo usuario.rol_id (SET NULL)
--- y moduloxrol (SET NULL / RESTRICT), porque son relaciones de configuracion
--- que no deben destruir datos historicos.
-
--- Tabla: rol
 CREATE TABLE rol (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE,
     descripcion VARCHAR(200),
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: modulo
 CREATE TABLE modulo (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL UNIQUE,
     descripcion VARCHAR(200),
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: moduloxrol
 CREATE TABLE moduloxrol (
     id SERIAL PRIMARY KEY,
     rol_id INTEGER REFERENCES rol(id) ON DELETE SET NULL,
@@ -90,14 +45,13 @@ CREATE TABLE moduloxrol (
     puede_crear BOOLEAN NOT NULL DEFAULT FALSE,
     puede_editar BOOLEAN NOT NULL DEFAULT FALSE,
     puede_eliminar BOOLEAN NOT NULL DEFAULT FALSE,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_moduloxrol_rol_modulo UNIQUE (rol_id, modulo_id)
 );
 
--- Tabla: usuario
 CREATE TABLE usuario (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -105,26 +59,24 @@ CREATE TABLE usuario (
     password_hash VARCHAR(255) NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     rol_id INTEGER REFERENCES rol(id) ON DELETE SET NULL,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: greenhouses
 CREATE TABLE greenhouses (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     ubicacion VARCHAR(200),
     area_metros_cuadrados NUMERIC(10,2),
     capacidad_maxima INTEGER,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: sensors
 CREATE TABLE sensors (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -132,25 +84,23 @@ CREATE TABLE sensors (
     nombre VARCHAR(100) NOT NULL,
     unidad VARCHAR(20) NOT NULL,
     ubicacion VARCHAR(100),
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: sensor_readings
 CREATE TABLE sensor_readings (
     id SERIAL PRIMARY KEY,
     sensor_id INTEGER NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
     valor NUMERIC(10,4) NOT NULL,
     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: crops
 CREATE TABLE crops (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
@@ -163,13 +113,12 @@ CREATE TABLE crops (
     ph_max NUMERIC(4,2),
     ciclo_dias INTEGER,
     descripcion TEXT,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: crop_batches
 CREATE TABLE crop_batches (
     id SERIAL PRIMARY KEY,
     crop_id INTEGER REFERENCES crops(id) ON DELETE CASCADE,
@@ -180,13 +129,12 @@ CREATE TABLE crop_batches (
     cantidad_plantas INTEGER,
     estado_cultivo VARCHAR(30) DEFAULT 'creciendo',
     notas TEXT,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: alerts
 CREATE TABLE alerts (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -198,13 +146,12 @@ CREATE TABLE alerts (
     prioridad VARCHAR(15) DEFAULT 'media',
     estado_alerta VARCHAR(20) DEFAULT 'activa',
     resuelta_en TIMESTAMP,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: irrigation_zones
 CREATE TABLE irrigation_zones (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -212,13 +159,12 @@ CREATE TABLE irrigation_zones (
     capacidad_litros_min NUMERIC(10,2),
     capacidad_litros_max NUMERIC(10,2),
     tipo VARCHAR(30) DEFAULT 'gotas',
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: irrigation_logs
 CREATE TABLE irrigation_logs (
     id SERIAL PRIMARY KEY,
     zone_id INTEGER NOT NULL REFERENCES irrigation_zones(id) ON DELETE CASCADE,
@@ -227,13 +173,12 @@ CREATE TABLE irrigation_logs (
     modo VARCHAR(20) DEFAULT 'automatico',
     resultado VARCHAR(20) DEFAULT 'exitoso',
     notas TEXT,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: actuators
 CREATE TABLE actuators (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE,
@@ -241,13 +186,12 @@ CREATE TABLE actuators (
     nombre VARCHAR(100) NOT NULL,
     ubicacion VARCHAR(100),
     estado_actuador VARCHAR(20) DEFAULT 'inactivo',
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: actuator_controls
 CREATE TABLE actuator_controls (
     id SERIAL PRIMARY KEY,
     actuator_id INTEGER NOT NULL REFERENCES actuators(id) ON DELETE CASCADE,
@@ -255,13 +199,12 @@ CREATE TABLE actuator_controls (
     accion VARCHAR(30) NOT NULL,
     valor_ajuste VARCHAR(50),
     resultado VARCHAR(20) DEFAULT 'exitoso',
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: greenhouse_settings
 CREATE TABLE greenhouse_settings (
     id SERIAL PRIMARY KEY,
     greenhouse_id INTEGER NOT NULL REFERENCES greenhouses(id) ON DELETE CASCADE UNIQUE,
@@ -273,30 +216,23 @@ CREATE TABLE greenhouse_settings (
     ph_min NUMERIC(4,2) DEFAULT 5.50,
     ph_max NUMERIC(4,2) DEFAULT 7.00,
     intervalo_lectura_minutos INTEGER DEFAULT 15,
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabla: estudiantes
 CREATE TABLE estudiantes (
     id SERIAL PRIMARY KEY,
     nombre VARCHAR(120) NOT NULL,
     grado VARCHAR(20) NOT NULL,
     promedio NUMERIC(4,2),
-    -- Auditoria: estado = borrado logico (TRUE activo / FALSE eliminado)
+
     estado BOOLEAN NOT NULL DEFAULT TRUE,
     creado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-
--- ==========================================================================
--- SECCION 2. FUNCION Y TRIGGERS DE ACTUALIZACION
--- ==========================================================================
--- set_actualizado() se dispara BEFORE UPDATE en las 16 tablas y mantiene
--- actualizado = CURRENT_TIMESTAMP sin que la API tenga que enviarlo.
 CREATE OR REPLACE FUNCTION set_actualizado() RETURNS TRIGGER AS $$
 BEGIN
     NEW.actualizado = CURRENT_TIMESTAMP;
@@ -321,11 +257,6 @@ CREATE TRIGGER trg_actuator_controls_actualizado BEFORE UPDATE ON actuator_contr
 CREATE TRIGGER trg_greenhouse_settings_actualizado BEFORE UPDATE ON greenhouse_settings FOR EACH ROW EXECUTE FUNCTION set_actualizado();
 CREATE TRIGGER trg_estudiantes_actualizado BEFORE UPDATE ON estudiantes FOR EACH ROW EXECUTE FUNCTION set_actualizado();
 
-
--- ==========================================================================
--- SECCION 3. INDICES
--- ==========================================================================
--- 3.1 Llaves foraneas consultadas por la API
 CREATE INDEX idx_moduloxrol_rol_id ON moduloxrol(rol_id);
 CREATE INDEX idx_moduloxrol_modulo_id ON moduloxrol(modulo_id);
 CREATE INDEX idx_usuario_rol_id ON usuario(rol_id);
@@ -341,7 +272,6 @@ CREATE INDEX idx_actuators_greenhouse_id ON actuators(greenhouse_id);
 CREATE INDEX idx_actuator_controls_actuator_id ON actuator_controls(actuator_id);
 CREATE INDEX idx_actuator_controls_usuario_id ON actuator_controls(usuario_id);
 
--- 3.2 Indices adicionales de consulta frecuente
 CREATE INDEX idx_usuario_username ON usuario(username);
 CREATE INDEX idx_usuario_email ON usuario(email);
 CREATE INDEX idx_sensor_readings_timestamp ON sensor_readings(timestamp DESC);
@@ -349,8 +279,6 @@ CREATE INDEX idx_alerts_estado_alerta ON alerts(estado_alerta);
 CREATE INDEX idx_crop_batches_estado_cultivo ON crop_batches(estado_cultivo);
 CREATE INDEX idx_irrigation_logs_fecha ON irrigation_logs(creado DESC);
 
--- 3.3 Indices de auditoria: borrado logico (estado) y orden por fecha de creacion
--- (Nota: greenhouse_settings.greenhouse_id ya esta indexado por la constraint UNIQUE)
 CREATE INDEX idx_rol_estado ON rol(estado);
 CREATE INDEX idx_modulo_estado ON modulo(estado);
 CREATE INDEX idx_moduloxrol_estado ON moduloxrol(estado);
@@ -384,12 +312,6 @@ CREATE INDEX idx_actuator_controls_creado ON actuator_controls(creado);
 CREATE INDEX idx_greenhouse_settings_creado ON greenhouse_settings(creado);
 CREATE INDEX idx_estudiantes_creado ON estudiantes(creado);
 
-
--- ==========================================================================
--- SECCION 4. SEMILLAS (datos iniciales)
--- ==========================================================================
-
--- 4.1 Roles (10) - el orden define los rol_id 1..10
 INSERT INTO rol (nombre, descripcion) VALUES
     ('administrador', 'Administra el sistema completo: usuarios, roles, permisos y modulos'),
     ('supervisor', 'Supervisa la operacion diaria de los invernaderos y del equipo de campo'),
@@ -402,7 +324,6 @@ INSERT INTO rol (nombre, descripcion) VALUES
     ('mantenimiento', 'Mantenimiento preventivo de actuadores, sensores e infraestructura'),
     ('lector', 'Solo consulta la informacion de operacion y de cultivos');
 
--- 4.2 Modulos (16) - el orden define los modulo_id 1..16
 INSERT INTO modulo (nombre, descripcion) VALUES
     ('greenhouses', 'Gestion de los invernaderos (nombre, ubicacion y capacidad)'),
     ('sensors', 'Catalogo de sensores instalados por invernadero'),
@@ -421,10 +342,6 @@ INSERT INTO modulo (nombre, descripcion) VALUES
     ('lecturas_externas', 'Lecturas provenientes de sensores externos'),
     ('alertas_externas', 'Alertas provenientes de fuentes externas');
 
--- 4.3 Matriz de permisos rol x modulo (86 filas)
---     Un rol puede ver lo que otro rol registra: los modulos de negocio
---     (crops, crop_batches, alerts, sensor_readings, irrigation_logs) son
---     visibles para varios roles para que el proceso se pueda cerrar.
 INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar, puede_eliminar) VALUES
     (1, 1, TRUE, TRUE, TRUE, TRUE),
     (1, 2, TRUE, TRUE, TRUE, TRUE),
@@ -513,13 +430,6 @@ INSERT INTO moduloxrol (rol_id, modulo_id, puede_ver, puede_crear, puede_editar,
     (10, 8, TRUE, FALSE, FALSE, FALSE),
     (10, 13, TRUE, FALSE, FALSE, FALSE);
 
--- 4.4 Usuarios (21)
---     Contrasenas (bcrypt, coste 12, bcrypt.hashpw(pw, bcrypt.gensalt())):
---       admin = Admin123*          | supervisor = Supervisor123*
---       agronomo = Agronomo123*    | regador = Regador123*
---       tecnico = Tecnico123*      | lector = Lector123*
---       auxiliar_riego = AuxiliarRiego123* | planificador = Planificador123*
---       calidad = Calidad123*      | mantenimiento = Mantenimiento123*
 INSERT INTO usuario (username, email, password_hash, nombre, rol_id) VALUES
     ('admin', 'admin@growapp.co', '$2b$12$HT2V4XTV6AqhcMQFu2HkzOR7Yp1piiJFusGan/7iJ9P9T5J84pd7e', 'Carlos Andres Ramirez', 1),
     ('supervisor1', 'supervisor1@growapp.co', '$2b$12$lJUuBnybDXM1WFYyqqe5QOALMMne.MW5LnmcOnxE6X3E8djuP1yvO', 'Juan Pablo Rojas', 2),
@@ -543,7 +453,6 @@ INSERT INTO usuario (username, email, password_hash, nombre, rol_id) VALUES
     ('calidad1', 'calidad1@growapp.co', '$2b$12$EyZTQUSBOLvFGipS3.Jcy.nJjldC4COM4kdzahLzKbB7Im7b1G9Vq', 'Viviana Alejandra Leon', 8),
     ('mantenimiento1', 'mantenimiento1@growapp.co', '$2b$12$DOsFjELxosEJ8DVdCpmOoOIKVrrnE1nxmZqt2VFp3xsK1lLmgXto2', 'Jorge Dario Buitrago', 9);
 
--- 4.5 Invernaderos (20)
 INSERT INTO greenhouses (nombre, ubicacion, area_metros_cuadrados, capacidad_maxima) VALUES
     ('Invernadero Tomate Chonto Cajica', 'Cajica, Cundinamarca', 1200.0, 6000),
     ('Invernadero Lechugas Chia', 'Chia, Cundinamarca', 800.0, 9000),
@@ -566,7 +475,6 @@ INSERT INTO greenhouses (nombre, ubicacion, area_metros_cuadrados, capacidad_max
     ('Invernadero Tomate Sogamoso', 'Sogamoso, Boyaca', 900.0, 4500),
     ('Invernadero Aji Villavicencio', 'Villavicencio, Meta', 720.0, 3600);
 
--- 4.6 Cultivos (20)
 INSERT INTO crops (nombre, nombre_cientifico, temperatura_min, temperatura_max, humedad_min, humedad_max, ph_min, ph_max, ciclo_dias, descripcion) VALUES
     ('Tomate chonto', 'Solanum lycopersicum', 18.0, 27.0, 60.0, 80.0, 5.5, 6.8, 110, 'Cultivo principal de los invernadero de clima templado en Cundinamarca'),
     ('Lechuga batavia', 'Lactuca sativa', 10.0, 20.0, 70.0, 90.0, 5.8, 6.6, 55, 'Hoja de ciclo corto sembrada en Tunja y Buga'),
@@ -589,7 +497,6 @@ INSERT INTO crops (nombre, nombre_cientifico, temperatura_min, temperatura_max, 
     ('Calabacin', 'Cucurbita pepo', 18.0, 28.0, 60.0, 75.0, 6.0, 7.0, 55, 'Cucurbitacea de fruto immature para Sogamoso'),
     ('Apio', 'Apium graveolens', 12.0, 22.0, 70.0, 85.0, 6.0, 7.0, 110, 'Umbelifera de alta humedad sembrada en Villavicencio');
 
--- 4.7 Sensores (20)
 INSERT INTO sensors (greenhouse_id, tipo, nombre, unidad, ubicacion) VALUES
     (1, 'temperatura', 'Sensor Temperatura 01', 'C', 'Zona norte'),
     (2, 'humedad', 'Sensor Humedad relativa 02', '%', 'Zona sur'),
@@ -612,7 +519,6 @@ INSERT INTO sensors (greenhouse_id, tipo, nombre, unidad, ubicacion) VALUES
     (19, 'luz', 'Sensor Luminosidad 19', 'lux', 'Entrada'),
     (20, 'co2', 'Sensor Dioxido de carbono 20', 'ppm', 'Techo');
 
--- 4.8 Lecturas de sensores (60)
 INSERT INTO sensor_readings (sensor_id, valor, timestamp) VALUES
     (1, 19.19, '2026-10-20 06:00:00'),
     (1, 23.03, '2026-10-25 13:00:00'),
@@ -675,7 +581,6 @@ INSERT INTO sensor_readings (sensor_id, valor, timestamp) VALUES
     (20, 581.77, '2026-10-26 14:13:00'),
     (20, 604.37, '2026-11-01 09:00:00');
 
--- 4.9 Lotes de cultivo (20)
 INSERT INTO crop_batches (crop_id, greenhouse_id, fecha_siembra, fecha_cosecha_estimada, fecha_cosecha_real, cantidad_plantas, estado_cultivo, notas) VALUES
     (1, 1, '2026-06-01', '2026-09-19', NULL, 582, 'creciendo', 'Lote sembrado en Cajica con riego por goteo.'),
     (2, 2, '2026-06-07', '2026-08-01', NULL, 242, 'creciendo', 'Lote sembrado en Chia con riego por goteo.'),
@@ -698,7 +603,6 @@ INSERT INTO crop_batches (crop_id, greenhouse_id, fecha_siembra, fecha_cosecha_e
     (19, 19, '2026-09-17', '2026-11-11', '2026-11-11', 680, 'cosechado', 'Lote sembrado en Sogamoso con riego por goteo.'),
     (20, 20, '2026-09-23', '2027-01-11', NULL, 175, 'creciendo', 'Lote sembrado en Villavicencio con riego por goteo.');
 
--- 4.10 Alertas (40)
 INSERT INTO alerts (greenhouse_id, sensor_id, tipo, mensaje, valor_actual, umbral, prioridad, estado_alerta, resuelta_en) VALUES
     (1, 1, 'temperatura_alta', 'Temperatura por encima del maximo permitido (Cajica)', 32.23, 28.0, 'alta', 'activa', NULL),
     (2, 2, 'humedad_baja', 'Humedad relativa por debajo del minimo (Chia)', 49.3, 55.0, 'media', 'activa', NULL),
@@ -741,7 +645,6 @@ INSERT INTO alerts (greenhouse_id, sensor_id, tipo, mensaje, valor_actual, umbra
     (19, 19, 'luz_baja', 'Luminosidad insuficiente por nubosidad (Sogamoso)', 7280.5, 8000.0, 'baja', 'resuelta', '2026-11-01 18:10:00'),
     (20, 20, 'co2_bajo', 'Concentracion de CO2 baja por ventilacion (Villavicencio)', 390.7, 400.0, 'media', 'resuelta', '2026-10-29 23:05:00');
 
--- 4.11 Zonas de riego (20)
 INSERT INTO irrigation_zones (greenhouse_id, nombre, capacidad_litros_min, capacidad_litros_max, tipo) VALUES
     (1, 'Sector A - Tomate chonto', 80.0, 300.0, 'gotas'),
     (2, 'Sector B - Lechuga batavia', 100.0, 360.0, 'aspersion'),
@@ -764,7 +667,6 @@ INSERT INTO irrigation_zones (greenhouse_id, nombre, capacidad_litros_min, capac
     (19, 'Sector C - Calabacin', 140.0, 480.0, 'gotas'),
     (20, 'Sector D - Apio', 160.0, 540.0, 'aspersion');
 
--- 4.12 Historial de riego (20)
 INSERT INTO irrigation_logs (zone_id, duracion_minutos, cantidad_agua_litros, modo, resultado, notas) VALUES
     (1, 10, 65.48, 'automatico', 'exitoso', 'Riego programado segun humedad del suelo.'),
     (2, 15, 91.47, 'manual', 'exitoso', 'Riego programado segun humedad del suelo.'),
@@ -787,7 +689,6 @@ INSERT INTO irrigation_logs (zone_id, duracion_minutos, cantidad_agua_litros, mo
     (19, 10, 164.97, 'automatico', 'exitoso', 'Riego programado segun humedad del suelo.'),
     (20, 15, 189.34, 'manual', 'parcial', 'Riego programado segun humedad del suelo.');
 
--- 4.13 Actuadores (20)
 INSERT INTO actuators (greenhouse_id, tipo, nombre, ubicacion, estado_actuador) VALUES
     (1, 'ventana', 'Ventana cenital 01', 'Techo', 'inactivo'),
     (2, 'ventilador', 'Ventilador de extraccion 02', 'Pared norte', 'activo'),
@@ -810,7 +711,6 @@ INSERT INTO actuators (greenhouse_id, tipo, nombre, ubicacion, estado_actuador) 
     (19, 'luz_artificial', 'Lampara de crecimiento 19', 'Centro', 'inactivo'),
     (20, 'ventana', 'Ventana lateral 20', 'Pared sur', 'activo');
 
--- 4.14 Controles de actuadores (20)
 INSERT INTO actuator_controls (actuator_id, usuario_id, accion, valor_ajuste, resultado) VALUES
     (1, 2, 'abrir', '100%', 'fallido'),
     (2, 3, 'cerrar', '0%', 'exitoso'),
@@ -833,7 +733,6 @@ INSERT INTO actuator_controls (actuator_id, usuario_id, accion, valor_ajuste, re
     (19, 11, 'apagar', NULL, 'exitoso'),
     (20, 1, 'ajustar', '60%', 'exitoso');
 
--- 4.15 Configuracion por invernadero (20)
 INSERT INTO greenhouse_settings (greenhouse_id, temp_min, temp_max, humedad_min, humedad_max, luz_min, ph_min, ph_max, intervalo_lectura_minutos) VALUES
     (1, 18.0, 27.0, 60.0, 80.0, 8000.0, 5.5, 6.8, 15),
     (2, 10.0, 20.0, 70.0, 90.0, 9000.0, 5.8, 6.6, 15),
@@ -856,7 +755,6 @@ INSERT INTO greenhouse_settings (greenhouse_id, temp_min, temp_max, humedad_min,
     (19, 18.0, 28.0, 60.0, 75.0, 10000.0, 6.0, 7.0, 15),
     (20, 12.0, 22.0, 70.0, 85.0, 11000.0, 6.0, 7.0, 15);
 
--- 4.16 Estudiantes (10)
 INSERT INTO estudiantes (nombre, grado, promedio) VALUES
     ('Ana Sofia Betancur', '10', 4.35),
     ('Juan David Marin', '11', 3.9),
@@ -869,10 +767,6 @@ INSERT INTO estudiantes (nombre, grado, promedio) VALUES
     ('Camila Andrea Hoyos', '11', 4.8),
     ('Santiago Villa Sanchez', '8', 3.95);
 
-
--- ==========================================================================
--- SECCION 5. COMENTARIOS DE LAS TABLAS
--- ==========================================================================
 COMMENT ON TABLE rol IS 'Roles del sistema con los permisos definidos en la matriz moduloxrol';
 COMMENT ON TABLE modulo IS 'Modulos de negocio sobre los que se asignan permisos';
 COMMENT ON TABLE moduloxrol IS 'Matriz de permisos (ver, crear, editar, eliminar) por rol y modulo';
@@ -890,4 +784,3 @@ COMMENT ON TABLE actuator_controls IS 'Ordenes de control ejecutadas sobre los a
 COMMENT ON TABLE greenhouse_settings IS 'Parametros ambientales configurados para cada invernadero';
 COMMENT ON TABLE estudiantes IS 'Estudiantes vinculados al proyecto educativo de los invernaderos';
 
--- Fin del esquema ApiGrowApp.

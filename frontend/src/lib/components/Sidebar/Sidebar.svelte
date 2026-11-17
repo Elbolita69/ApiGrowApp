@@ -1,16 +1,11 @@
 <script>
 	import { page } from '$app/state';
 
-	/**
-	 * items: [{ ruta, titulo, icono }] construidos con los modulos del rol (tabla moduloxrol).
-	 * @type {{items: Array<{ruta: string, titulo: string, icono: string}>, abierto: boolean, oncerrar: () => void}}
-	 */
 	let { items, abierto, oncerrar } = $props();
 </script>
 
 {#if abierto}
-	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-	<div class="sidebar-backdrop d-lg-none" onclick={oncerrar}></div>
+	<div class="sidebar-backdrop d-lg-none" role="presentation" onclick={oncerrar}></div>
 {/if}
 
 <aside class="sidebar bg-white shadow-sm" class:abierto>

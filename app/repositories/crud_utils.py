@@ -1,18 +1,9 @@
-"""Utilidades compartidas de la capa de datos: actualizacion dinamica y borrado logico.
-
-Reglas del taller:
-- El borrado es SIEMPRE logico: `estado = FALSE` (nunca se borra una fila).
-- Toda actualizacion refresca `actualizado = CURRENT_TIMESTAMP`.
-- Solo se pueden tocar las tablas de negocio de la lista blanca.
-"""
-
 from __future__ import annotations
 
 from typing import Any, Mapping, Optional
 
 from psycopg2.extras import RealDictCursor
 
-# Las 14 tablas de negocio (13 de entidades + roles).
 TABLAS_PERMITIDAS = frozenset(
     {
         "greenhouses",
@@ -32,8 +23,6 @@ TABLAS_PERMITIDAS = frozenset(
     }
 )
 
-# Columnas que se pueden actualizar en cada tabla (las claves primarias y los
-# campos de auditoria quedan fuera de la lista).
 COLUMNAS_PERMITIDAS: Mapping[str, frozenset[str]] = {
     "greenhouses": frozenset(
         {"nombre", "ubicacion", "area_metros_cuadrados", "capacidad_maxima", "estado"}
@@ -134,7 +123,7 @@ COLUMNAS_PERMITIDAS: Mapping[str, frozenset[str]] = {
 
 
 class TablaNoPermitida(ValueError):
-    """Se intento tocar una tabla fuera de la lista blanca."""
+    pass
 
 
 def _validar_tabla(tabla: str) -> None:
@@ -145,11 +134,6 @@ def _validar_tabla(tabla: str) -> None:
 def actualizar_generico(
     conn: Any, tabla: str, datos: Mapping[str, Any], registro_id: int
 ) -> bool:
-    """Actualiza los campos recibidos (los que no sean None) de un registro.
-
-    Siempre inyecta `actualizado = CURRENT_TIMESTAMP` y devuelve True si la
-    fila existia y estaba activa.
-    """
     _validar_tabla(tabla)
     permitidas = COLUMNAS_PERMITIDAS[tabla]
     campos = {
@@ -178,7 +162,6 @@ def actualizar_generico_por_campo(
     valor: Any,
     datos: Mapping[str, Any],
 ) -> bool:
-    """Actualiza los campos recibidos de las filas que cumplen `campo = valor`."""
     _validar_tabla(tabla)
     permitidas = COLUMNAS_PERMITIDAS[tabla]
     if campo not in permitidas:
@@ -205,7 +188,6 @@ def actualizar_generico_por_campo(
 
 
 def eliminar_logico(conn: Any, tabla: str, registro_id: int) -> bool:
-    """Borrado logico: `estado = FALSE`. El registro nunca se elimina de la tabla."""
     _validar_tabla(tabla)
     sql = (
         f"UPDATE {tabla} SET estado = FALSE, actualizado = CURRENT_TIMESTAMP "
@@ -220,7 +202,6 @@ def eliminar_logico(conn: Any, tabla: str, registro_id: int) -> bool:
 def eliminar_logico_por_campo(
     conn: Any, tabla: str, campo: str, valor: Any
 ) -> bool:
-    """Borrado logico de las filas que cumplem un campo (por ejemplo el invernadero)."""
     _validar_tabla(tabla)
     if campo not in COLUMNAS_PERMITIDAS[tabla]:
         raise TablaNoPermitida(

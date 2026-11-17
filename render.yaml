@@ -1,9 +1,4 @@
-# Blueprint de Render: despliega las tres piezas de GrowApp de una vez.
-# Render -> New -> Blueprint -> elegir este repositorio.
-# Las variables con `sync: false` las pide Render en el formulario (son secretos
-# o URLs que solo se conocen despues del primer despliegue).
 services:
-  # API principal: FastAPI + PostgreSQL en Neon
   - type: web
     name: growapp-api
     runtime: python
@@ -35,7 +30,6 @@ services:
       - key: CORS_ORIGINS
         sync: false
 
-  # API auxiliar: Express + MySQL en Aiven (modulos externos)
   - type: web
     name: growapp-express
     runtime: node
@@ -48,7 +42,6 @@ services:
       - key: MYSQL_URL
         sync: false
 
-  # Frontend: SvelteKit compilado como sitio estatico
   - type: web
     name: growapp
     runtime: static

@@ -14,7 +14,6 @@
 		if (restaurarSesion()) goto('/inicio', { replaceState: true });
 	});
 
-	/** @param {SubmitEvent} e */
 	async function entrar(e) {
 		e.preventDefault();
 		error = '';

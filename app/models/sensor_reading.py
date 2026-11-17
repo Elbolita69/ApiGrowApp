@@ -13,14 +13,10 @@ class SensorReadingBase(BaseModel):
 
 
 class SensorReadingCreate(SensorReadingBase):
-    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class SensorReadingUpdate(BaseModel):
-    """Actualizacion parcial: sin `id` ni campos primary key editables."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     sensor_id: Optional[int] = None
@@ -28,8 +24,6 @@ class SensorReadingUpdate(BaseModel):
 
 
 class SensorReading(SensorReadingBase):
-    """Modelo de lectura: incluye la auditoria."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

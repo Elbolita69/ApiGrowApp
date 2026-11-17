@@ -20,14 +20,10 @@ class GreenhouseSettingBase(BaseModel):
 
 
 class GreenhouseSettingCreate(GreenhouseSettingBase):
-    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class GreenhouseSettingUpdate(BaseModel):
-    """Actualizacion parcial: sin `id` ni campos primary key editables."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     temp_min: Optional[float] = None
@@ -41,8 +37,6 @@ class GreenhouseSettingUpdate(BaseModel):
 
 
 class GreenhouseSetting(GreenhouseSettingBase):
-    """Modelo de lectura: incluye la auditoria."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

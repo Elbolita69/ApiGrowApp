@@ -1,9 +1,3 @@
-"""Repositorio de ordenes de control de actuadores (SQL puro con psycopg2, sincrono).
-
-`usuario_id` SIEMPRE lo inyecta el backend con el usuario autenticado: nunca
-se toma del cuerpo de la peticion.
-"""
-
 from __future__ import annotations
 
 from typing import Optional
@@ -14,7 +8,6 @@ from app.core.database import Database
 from app.models.actuator_control import ActuatorControlCreate, ActuatorControlUpdate
 from app.repositories.crud_utils import actualizar_generico, eliminar_logico
 
-# JOIN con alias legibles: el frontend nunca necesita conocer ids.
 SELECT_ACTUATOR_CONTROLS = """
     SELECT ac.*,
            a.nombre AS actuator_nombre,
@@ -65,7 +58,6 @@ class ActuatorControlRepository:
     def crear(
         self, control: ActuatorControlCreate, usuario_id: Optional[int] = None
     ) -> Optional[int]:
-        """Registra una orden de control. `usuario_id` es el usuario autenticado."""
         with self.db.get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(

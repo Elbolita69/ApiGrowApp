@@ -1,5 +1,3 @@
-"""Routers de la API (todos sincronos: el driver de base de datos es psycopg2)."""
-
 from app.api.rutas_greenhouse import router as rutas_greenhouses
 from app.api.rutas_sensor import router as rutas_sensors
 from app.api.rutas_sensor_reading import router as rutas_sensor_readings

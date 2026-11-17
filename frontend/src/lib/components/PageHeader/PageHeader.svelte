@@ -1,5 +1,4 @@
 <script>
-	/** @type {{titulo: string, icono?: string, subtitulo?: string, children?: import('svelte').Snippet}} */
 	let { titulo, icono = 'bi-grid', subtitulo = '', children } = $props();
 </script>
 

@@ -18,7 +18,6 @@ from app.repositories.user_repo import UserRepository
 router = APIRouter(prefix="/auth", tags=["Autenticacion"])
 repo = UserRepository()
 
-# Rol mas restringido: todo registro publico entra como 'lector'.
 ROL_POR_DEFECTO = "lector"
 
 
@@ -28,8 +27,6 @@ class Token(BaseModel):
 
 
 class RegistroUsuario(BaseModel):
-    """Datos del registro publico. El rol no lo elige el cliente."""
-
     model_config = ConfigDict(extra="forbid")
 
     username: str
@@ -48,7 +45,6 @@ class UserResponse(BaseModel):
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Autentica un usuario y retorna un token JWT."""
     user = repo.obtener_credenciales_por_username(form_data.username)
 
     if not user:
@@ -89,7 +85,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
 )
 def register(user_data: RegistroUsuario):
-    """Registra un nuevo usuario. El rol lo asigna el backend (`lector`)."""
     if repo.obtener_por_username(user_data.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -124,7 +119,6 @@ def register(user_data: RegistroUsuario):
 
 @router.get("/me", response_model=UserResponse)
 def me(current_user: dict = Depends(get_current_user)):
-    """Informacion del usuario autenticado (nunca su hash de contrasena)."""
     user = repo.obtener_por_id(int(current_user["sub"]))
     if not user:
         raise HTTPException(
@@ -143,7 +137,6 @@ def me(current_user: dict = Depends(get_current_user)):
 
 @router.get("/modulos")
 def modulos_del_rol(current_user: dict = Depends(get_current_user)):
-    """Modulos a los que tiene acceso el rol del usuario (tabla moduloxrol)."""
     db = repo.db
     with db.get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:

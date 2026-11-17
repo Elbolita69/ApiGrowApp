@@ -28,16 +28,10 @@ from app.core.database import Database
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Precalienta el pool de conexiones al arrancar.
-
-    En una base en la nube (Neon) abrir una conexion tarda ~0.6 s. Sin esto,
-    la primera peticion del usuario paga ese tiempo. Si la base no esta
-    disponible, la API arranca igual y cada peticion lo intentara de nuevo.
-    """
     db = Database()
     try:
         db.precalentar()
-    except Exception:  # pragma: no cover - la base puede no estar lista aun
+    except Exception:
         pass
     yield
     db.close_pool()

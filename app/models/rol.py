@@ -13,14 +13,10 @@ class RolBase(BaseModel):
 
 
 class RolCreate(RolBase):
-    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class RolUpdate(BaseModel):
-    """Actualizacion parcial: sin `id` ni campos primary key editables."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     nombre: Optional[str] = None
@@ -28,8 +24,6 @@ class RolUpdate(BaseModel):
 
 
 class Rol(RolBase):
-    """Modelo de lectura: incluye la auditoria."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

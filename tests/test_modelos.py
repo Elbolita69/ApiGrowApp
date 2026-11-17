@@ -1,5 +1,3 @@
-"""Pruebas de los modelos Pydantic v2."""
-
 from __future__ import annotations
 
 import pytest
@@ -12,7 +10,6 @@ from app.models.user import User, UserCreate, UserUpdate
 
 
 def test_crop_create_no_acepta_id():
-    """El id lo asigna la base de datos: el cliente no lo puede mandar."""
     with pytest.raises(ValidationError):
         CropCreate(nombre="Tomate", id=1)
 
@@ -34,7 +31,6 @@ def test_estudiante_no_acepta_id():
 
 @pytest.mark.parametrize("promedio", [-1, -0.5, 5.5, 6, 10])
 def test_estudiante_rechaza_promedio_fuera_de_rango(promedio):
-    """El promedio va de 0 a 5."""
     with pytest.raises(ValidationError):
         Estudiante(nombre="Ana", grado=3, promedio=promedio)
 
@@ -54,7 +50,6 @@ def test_los_modelos_de_escritura_rechazan_campos_desconocidos():
 
 
 def test_user_create_no_expone_el_hash_de_la_contrasena():
-    """El hash lo genera el backend con bcrypt."""
     assert "password_hash" not in UserCreate.model_fields
     assert "password" in UserCreate.model_fields
     assert "password_hash" not in User.model_fields
@@ -68,7 +63,6 @@ def test_los_modelos_de_lectura_incluyen_la_auditoria():
 
 
 def test_los_modelos_usan_pydantic_v2():
-    """Ningun modelo usa la clase `Config` de Pydantic v1."""
     for nombre in dir(modelos):
         objeto = getattr(modelos, nombre)
         if isinstance(objeto, type) and issubclass(objeto, BaseModel):

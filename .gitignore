@@ -1,9 +1,7 @@
-# Entorno
 .env
 .env.*
 !.env.example
 
-# Python
 .venv/
 venv/
 env/
@@ -13,18 +11,15 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# Node / SvelteKit
 node_modules/
 frontend/.svelte-kit/
 frontend/build/
 frontend/.vite/
 npm-debug.log*
 
-# Sistema operativo
 .DS_Store
 Thumbs.db
 __MACOSX/
 ._*
 
-# Herramientas
 .atl

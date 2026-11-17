@@ -19,7 +19,6 @@ class Pregunta(BaseModel):
 
 @router.post("/preguntar")
 def preguntar(pregunta: Pregunta, current_user: dict = Depends(get_current_user)):
-    """Responde una pregunta sobre la base de datos SOLO en lenguaje natural."""
     try:
         respuesta = responder_en_lenguaje_natural(pregunta.pregunta, current_user)
     except SqlNoPermitidoError as exc:
@@ -32,7 +31,6 @@ def preguntar(pregunta: Pregunta, current_user: dict = Depends(get_current_user)
 
 @router.get("/schema")
 def esquema_de_la_base_de_datos(current_user: dict = Depends(get_current_user)):
-    """Estructura de la base de datos (para depuracion)."""
     try:
         return get_schema()
     except Exception:

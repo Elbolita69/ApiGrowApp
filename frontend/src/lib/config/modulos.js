@@ -1,50 +1,3 @@
-// Catalogo de modulos. La clave coincide con modulo.nombre en la base de datos (tabla `modulo`).
-// El MENU y los PERMISOS no se definen aqui: salen de la base de datos (tabla moduloxrol).
-// Aqui solo se describe como pintar cada modulo (columnas del DataTable y campos del formulario).
-// Regla del taller: nunca se muestran ni se piden IDs; las llaves foraneas se eligen por nombre.
-
-/**
- * Columna del DataTable.
- * @typedef {Object} Columna
- * @property {string} key clave de la columna en la respuesta de la API
- * @property {string} label texto que se ve
- * @property {string} [tipo] 'numero' | 'etiqueta' | 'fecha' | 'fechahora'
- * @property {string} [lookup] catalogo usado para traducir una llave foranea a nombre
- */
-
-/**
- * Campo del formulario.
- * @typedef {Object} Campo
- * @property {string} key clave del campo
- * @property {string} label texto que se ve
- * @property {string} [tipo] text | number | date | datetime-local | email | password | select | textarea
- * @property {string} [lookup] catalogo de donde salen las opciones del select
- * @property {string[]} [opciones] valores fijos de un select
- * @property {boolean} [requerido]
- * @property {boolean} [requeridoAlCrear]
- * @property {boolean} [soloCrear]
- * @property {string} [ayuda]
- * @property {string | number} [step]
- * @property {string | number} [min]
- * @property {number} [ancho] columnas del formulario Bootstrap (6 o 12)
- */
-
-/**
- * Configuracion de un modulo.
- * @typedef {Object} Modulo
- * @property {string} titulo
- * @property {string} singular
- * @property {string} icono
- * @property {string} ruta
- * @property {string} [claveId] campo que identifica el registro (por defecto 'id')
- * @property {Record<string, string>} [automaticos] campos que se llenan solos
- * @property {Columna[]} columnas
- * @property {Campo[]} campos
- */
-
-// Catalogos usados para traducir llaves foraneas a NOMBRES (nunca se muestra el id).
-// `servicio` es la clave del servicio en src/lib/services/index.js.
-/** @type {Record<string, { servicio: string, label: string }>} */
 export const LOOKUPS = {
 	greenhouses: { servicio: 'greenhouses', label: 'nombre' },
 	sensors: { servicio: 'sensors', label: 'nombre' },
@@ -57,7 +10,6 @@ export const LOOKUPS = {
 
 const TIPOS_SENSOR = ['temperatura', 'humedad', 'ph', 'luz', 'co2'];
 
-/** @type {Record<string, Modulo>} */
 export const MODULOS = {
 	greenhouses: {
 		titulo: 'Invernaderos',
@@ -290,7 +242,6 @@ export const MODULOS = {
 			{ key: 'creado', label: 'Fecha', tipo: 'fechahora' },
 			{ key: 'actualizado', label: 'Actualizado', tipo: 'fechahora' }
 		],
-		// usuario_id se completa solo con el usuario que inicio sesion (no se pide ningun ID)
 		automaticos: { usuario_id: 'userId' },
 		campos: [
 			{ key: 'actuator_id', label: 'Actuador', tipo: 'select', lookup: 'actuators', requerido: true },
@@ -310,7 +261,6 @@ export const MODULOS = {
 		singular: 'parametro',
 		icono: 'bi-sliders',
 		ruta: 'parametros',
-		// En la API los parametros se editan/eliminan por invernadero (clave interna).
 		claveId: 'greenhouse_id',
 		columnas: [
 			{ key: 'greenhouse_nombre', label: 'Invernadero' },
@@ -419,12 +369,7 @@ export const MODULOS = {
 	}
 };
 
-/**
- * Lista de modulos conocidos por la aplicacion (para armar el menu en el orden de la BD).
- * @param {string} nombre
- * @returns {string|null}
- */
 export const rutaDe = (nombre) => {
-	const modulos = /** @type {Record<string, { ruta: string }>} */ (MODULOS);
+	const modulos = (MODULOS);
 	return modulos[nombre] ? '/' + modulos[nombre].ruta : null;
 };

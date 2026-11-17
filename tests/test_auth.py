@@ -1,5 +1,3 @@
-"""Pruebas de autenticacion y permisos por rol (moduloxrol)."""
-
 from __future__ import annotations
 
 import pytest
@@ -19,7 +17,6 @@ USUARIO = {"sub": "7", "username": "ana", "rol": "supervisor"}
 def test_require_permission_consulta_moduloxrol_con_el_nombre_del_rol(
     monkeypatch, fake_db
 ):
-    """La consulta de permisos une moduloxrol, rol y modulo por su nombre."""
     fake_db.fila = {"permitido": True}
     monkeypatch.setattr(modulo_auth, "_db", fake_db)
 
@@ -41,7 +38,6 @@ def test_require_permission_consulta_moduloxrol_con_el_nombre_del_rol(
 
 
 def test_rol_sin_permiso_recibe_403(monkeypatch, fake_db):
-    """Un rol sin permiso en el modulo recibe 403."""
     fake_db.fila = {"permitido": False}
     monkeypatch.setattr(modulo_auth, "_db", fake_db)
 
@@ -54,7 +50,6 @@ def test_rol_sin_permiso_recibe_403(monkeypatch, fake_db):
 
 
 def test_sin_registro_de_permiso_recibe_403(monkeypatch, fake_db):
-    """Si no hay fila en moduloxrol, el permiso se deniega."""
     fake_db.fila = None
     monkeypatch.setattr(modulo_auth, "_db", fake_db)
 
@@ -66,7 +61,6 @@ def test_sin_registro_de_permiso_recibe_403(monkeypatch, fake_db):
 
 
 def test_la_accion_usa_la_columna_correspondiente(monkeypatch, fake_db):
-    """Cada accion CRUD consulta su columna de moduloxrol."""
     fake_db.fila = {"permitido": True}
     monkeypatch.setattr(modulo_auth, "_db", fake_db)
 

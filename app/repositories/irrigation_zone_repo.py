@@ -1,5 +1,3 @@
-"""Repositorio de zonas de riego (SQL puro con psycopg2, sincrono)."""
-
 from __future__ import annotations
 
 from typing import Optional
@@ -10,7 +8,6 @@ from app.core.database import Database
 from app.models.irrigation_zone import IrrigationZoneCreate, IrrigationZoneUpdate
 from app.repositories.crud_utils import actualizar_generico, eliminar_logico
 
-# JOIN con alias legibles: el frontend nunca necesita conocer ids.
 SELECT_IRRIGATION_ZONES = """
     SELECT iz.*,
            g.nombre AS greenhouse_nombre

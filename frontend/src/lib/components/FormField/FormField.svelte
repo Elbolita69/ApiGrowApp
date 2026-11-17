@@ -1,9 +1,4 @@
 <script>
-	/**
-	 * Campo de formulario reutilizable (texto, numero, fecha, lista desplegable, area de texto).
-	 * Los selects reciben opciones [{valor, etiqueta}]: el usuario elige por nombre, nunca por ID.
-	 * @type {{campo: any, valor: any, opciones?: Array<{valor: any, etiqueta: string}>, requerido?: boolean}}
-	 */
 	let { campo, valor = $bindable(), opciones = [], requerido = false } = $props();
 	const id = $derived('campo_' + campo.key);
 </script>

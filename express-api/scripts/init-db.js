@@ -1,6 +1,3 @@
-// Carga express-api/schema.sql en la base de MYSQL_URL sin instalar el cliente mysql.
-// Uso (dentro de express-api/):  npm run db:init
-// Si las tablas ya tienen datos no hace nada, para no duplicar las filas de ejemplo.
 const fs = require('node:fs');
 const path = require('node:path');
 const mysql = require('mysql2/promise');

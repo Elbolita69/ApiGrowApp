@@ -1,5 +1,3 @@
-"""Repositorio de sensores (SQL puro con psycopg2, sincrono)."""
-
 from __future__ import annotations
 
 from typing import Optional
@@ -12,12 +10,6 @@ from app.repositories.crud_utils import actualizar_generico, eliminar_logico
 
 
 class SensorRepository:
-    """Sensores.
-
-    Los listados incluyen `greenhouse_nombre` para que el frontend
-    muestre el invernadero por nombre y nunca por su identificador.
-    """
-
     SELECT_SENSORS = (
         "SELECT s.*, g.nombre AS greenhouse_nombre FROM sensors s "
         "JOIN greenhouses g ON s.greenhouse_id = g.id "

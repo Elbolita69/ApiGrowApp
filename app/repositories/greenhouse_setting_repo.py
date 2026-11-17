@@ -1,5 +1,3 @@
-"""Repositorio de parametros por invernadero (SQL puro con psycopg2, sincrono)."""
-
 from __future__ import annotations
 
 from typing import Optional
@@ -18,7 +16,6 @@ from app.repositories.crud_utils import (
     eliminar_logico_por_campo,
 )
 
-# JOIN con alias legibles: el frontend nunca necesita conocer ids.
 SELECT_GREENHOUSE_SETTINGS = """
     SELECT gs.*,
            g.nombre AS greenhouse_nombre
@@ -98,7 +95,6 @@ class GreenhouseSettingRepository:
     def actualizar_por_greenhouse(
         self, greenhouse_id: int, setting: GreenhouseSettingUpdate
     ) -> bool:
-        """Actualiza los parametros del invernadero indicado."""
         with self.db.get_connection() as conn:
             return actualizar_generico_por_campo(
                 conn,

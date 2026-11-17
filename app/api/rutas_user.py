@@ -45,7 +45,6 @@ def actualizar_user(
     user: UserUpdate,
     current_user: dict = Depends(get_current_user),
 ):
-    # Solo un administrador puede cambiar el rol de un usuario.
     if "rol_id" in user.model_fields_set and current_user.get("rol") != ROL_ADMINISTRADOR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -62,7 +61,6 @@ def actualizar_user(
     "/{user_id}", dependencies=[Depends(require_permission("usuario", "eliminar"))]
 )
 def eliminar_user(user_id: int, current_user: dict = Depends(get_current_user)):
-    # Borrado logico (estado = FALSE) y solo para administradores.
     if current_user.get("rol") != ROL_ADMINISTRADOR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

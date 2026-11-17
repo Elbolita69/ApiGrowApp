@@ -1,5 +1,3 @@
-"""Pruebas del asistente: la regla S15 (el asistente NUNCA muestra SQL)."""
-
 from __future__ import annotations
 
 import pytest
@@ -26,7 +24,6 @@ CONSULTAS_PROHIBIDAS = [
 
 @pytest.mark.parametrize("sql", CONSULTAS_PROHIBIDAS)
 def test_run_sql_query_rechaza_consultas_no_permitidas(sql, monkeypatch, fake_db):
-    """Las consultas que no son de solo lectura se rechazan sin ejecutarse."""
     monkeypatch.setattr(modulo_asistente, "_db", fake_db)
 
     with pytest.raises(SqlNoPermitidoError):
@@ -43,7 +40,6 @@ def test_validar_sql_rechaza_las_mismas_consultas(sql):
 
 
 def test_run_sql_query_acepta_un_select(monkeypatch, fake_db):
-    """Una consulta de lectura normal si se ejecuta y devuelve las filas."""
     fake_db.filas = [{"total": 3}]
     monkeypatch.setattr(modulo_asistente, "_db", fake_db)
 
@@ -68,7 +64,6 @@ def test_la_conexion_del_asistente_es_de_solo_lectura(monkeypatch, fake_db):
 
 
 def test_el_asistente_responde_en_lenguaje_natural_sin_sql(monkeypatch, fake_db):
-    """La respuesta es texto en espanol: nunca SQL ni nombres de tabla."""
     fake_db.respuestas = {
         "count(*)": [{"total": 20}],
         "from greenhouses": [{"nombre": "Invernadero Central"}],
@@ -93,7 +88,6 @@ def test_el_asistente_responde_en_lenguaje_natural_sin_sql(monkeypatch, fake_db)
 
 
 def test_el_asistente_responde_por_temas(monkeypatch, fake_db):
-    """Cubre los temas minimos del taller en lenguaje natural."""
     fake_db.respuestas = {"count(*)": [{"total": 7}]}
     monkeypatch.setattr(modulo_asistente, "_db", fake_db)
 
@@ -118,7 +112,6 @@ def test_el_asistente_responde_por_temas(monkeypatch, fake_db):
 
 
 def test_pregunta_sin_respaldo_devuelve_mensaje_controlado(monkeypatch, fake_db):
-    """Si no se puede resolver, responde sin filtrar informacion tecnica."""
     monkeypatch.setattr(modulo_asistente, "_db", fake_db)
 
     respuesta = responder_en_lenguaje_natural(
@@ -131,7 +124,6 @@ def test_pregunta_sin_respaldo_devuelve_mensaje_controlado(monkeypatch, fake_db)
 
 
 def test_los_sensores_de_un_invernadero_se_filtran_por_nombre(monkeypatch, fake_db):
-    """'sensores del invernadero X' consulta por el nombre del invernadero."""
     fake_db.respuestas = {
         "count(*)": [{"total": 3}],
         "from sensors": [{"nombre": "Sensor de temperatura", "tipo": "temperatura"}],
@@ -150,11 +142,6 @@ def test_los_sensores_de_un_invernadero_se_filtran_por_nombre(monkeypatch, fake_
 
 
 def test_un_invernadero_numerado_se_busca_por_id_y_no_por_nombre(monkeypatch, fake_db):
-    """'el invernadero 1' se resuelve por su id, no por su nombre.
-
-    Regresion: el filtro por nombre no encontraba nada cuando el usuario
-    se referia al invernadero por su numero.
-    """
     fake_db.respuestas = {
         "count(*)": [{"total": 1}],
         "from sensors": [{"nombre": "Sensor Temperatura 01", "tipo": "temperatura"}],
@@ -168,7 +155,6 @@ def test_un_invernadero_numerado_se_busca_por_id_y_no_por_nombre(monkeypatch, fa
 
     assert "Invernadero Tomate Chonto Cajica" in respuesta
     assert "1" in respuesta
-    # La consulta debe llevar el id como parametro, no el nombre.
     consultas = [sql for sql, _ in fake_db.consultas]
     assert any("g.id = %s" in sql for sql in consultas)
     assert not any("ILIKE %s" in sql for sql in consultas)
@@ -177,7 +163,6 @@ def test_un_invernadero_numerado_se_busca_por_id_y_no_por_nombre(monkeypatch, fa
 
 
 def test_el_esquema_se_arma_desde_information_schema(monkeypatch, fake_db):
-    """`get_schema()` lee la estructura de la base de datos."""
     fake_db.respuestas = {
         "information_schema.columns": [
             {"table_name": "greenhouses", "column_name": "nombre", "data_type": "text"}

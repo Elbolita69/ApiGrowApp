@@ -16,14 +16,10 @@ class ActuatorBase(BaseModel):
 
 
 class ActuatorCreate(ActuatorBase):
-    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class ActuatorUpdate(BaseModel):
-    """Actualizacion parcial: sin `id` ni campos primary key editables."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     greenhouse_id: Optional[int] = None
@@ -34,8 +30,6 @@ class ActuatorUpdate(BaseModel):
 
 
 class Actuator(ActuatorBase):
-    """Modelo de lectura: incluye la auditoria."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

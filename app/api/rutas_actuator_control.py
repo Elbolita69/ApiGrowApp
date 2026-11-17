@@ -36,11 +36,6 @@ def crear_control(
     control: ActuatorControlCreate,
     usuario_id: int = Depends(get_current_user_id),
 ):
-    """Registra una orden de control.
-
-    `usuario_id` lo inyecta el backend con el usuario autenticado: nunca se
-    toma del cuerpo de la peticion.
-    """
     nuevo_id = repo.crear(control, usuario_id=usuario_id)
     return {"mensaje": "Control registrado exitosamente", "id": nuevo_id}
 

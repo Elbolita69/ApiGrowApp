@@ -1,5 +1,4 @@
 <script>
-	/** Tarjeta de resumen del tablero: icono, cantidad y enlace al modulo. */
 	let { titulo, valor, icono = 'bi-grid', href = '' } = $props();
 </script>
 

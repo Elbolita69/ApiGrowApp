@@ -1,26 +1,5 @@
-// Sesion del usuario: token JWT, datos del usuario y modulos permitidos para su rol.
-// Los modulos vienen de la base de datos (tabla moduloxrol) a traves de GET /auth/modulos.
 const KEY = 'growapp_token';
 
-/**
- * Permisos de un modulo para el rol del usuario (tabla moduloxrol).
- * @typedef {Object} Modulo
- * @property {string} nombre
- * @property {string} descripcion
- * @property {boolean} puede_ver
- * @property {boolean} puede_crear
- * @property {boolean} puede_editar
- * @property {boolean} puede_eliminar
- */
-
-/**
- * @typedef {Object} Claims
- * @property {number} sub
- * @property {string} username
- * @property {string} rol
- */
-
-/** @returns {string|null} */
 function leerToken() {
 	try {
 		return localStorage.getItem(KEY);
@@ -29,7 +8,6 @@ function leerToken() {
 	}
 }
 
-/** @param {string} token @returns {Claims|null} */
 function decodificar(token) {
 	try {
 		const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -39,17 +17,6 @@ function decodificar(token) {
 	}
 }
 
-/**
- * @type {{
- *   token: string | null,
- *   userId: number | null,
- *   username: string,
- *   rol: string,
- *   nombre: string,
- *   modulos: Modulo[],
- *   listo: boolean
- * }}
- */
 export const session = $state({
 	token: null,
 	userId: null,
@@ -60,7 +27,6 @@ export const session = $state({
 	listo: false
 });
 
-/** @param {string} token */
 export function iniciarSesion(token) {
 	const data = decodificar(token);
 	session.token = token;
@@ -70,7 +36,6 @@ export function iniciarSesion(token) {
 	try {
 		localStorage.setItem(KEY, token);
 	} catch {
-		/* almacenamiento no disponible */
 	}
 }
 
@@ -91,12 +56,9 @@ export function cerrarSesion() {
 	try {
 		localStorage.removeItem(KEY);
 	} catch {
-		/* almacenamiento no disponible */
 	}
 }
 
-/** Permisos del usuario sobre un modulo (null si el rol no tiene acceso). */
-/** @param {string} nombreModulo @returns {Modulo|null} */
 export function permisosDe(nombreModulo) {
 	return session.modulos.find((m) => m.nombre === nombreModulo) ?? null;
 }

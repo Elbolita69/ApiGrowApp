@@ -46,10 +46,11 @@ API REST y panel web para la gestion de invernaderos inteligentes (cultivos, sen
 
 ### 1. Obtener el proyecto
 
-Abre **PowerShell** en la carpeta del proyecto:
+Clona el repositorio y abre **PowerShell** en su carpeta:
 
 ```powershell
-cd "C:\Users\duvan\OneDrive\Escritorio\Nueva carpeta\ApiGrowApp-main"
+git clone https://github.com/Elbolita69/ApiGrowApp.git
+cd ApiGrowApp
 ```
 
 ### 2. Crear el entorno virtual de Python
@@ -130,12 +131,6 @@ psql -h localhost -U postgres -d growapp -f schema.sql
 .\.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-O con el script incluido:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\iniciar_api.ps1
-```
-
 Verifica en el navegador: <http://localhost:8000/docs> (documentacion interactiva) y <http://localhost:8000/health>.
 
 ### 7. Levantar el frontend
@@ -158,24 +153,12 @@ npm install
 npm start
 ```
 
-### Scripts de ayuda
-
-En `scripts/` hay tareas para Windows que evitan repetir comandos a mano. La guía completa, paso a paso, está en **[INSTRUCCIONES_WINDOWS.md](INSTRUCCIONES_WINDOWS.md)**:
-
-| Script | Que hace |
-|---|---|
-| `scripts\instalar_dependencias.ps1` | Crea `.venv`, instala Python, `npm install` del frontend y de `express-api`. |
-| `scripts\verificar.ps1` | Diagnostico completo: comprueba herramientas, `.env`, base de datos, API, frontend y pruebas. |
-| `scripts\iniciar_api.ps1` / `.bat` | Levanta la API en el puerto 8000 con recarga. |
-| `scripts\iniciar_frontend.ps1` / `.bat` | Levanta el frontend en el puerto 5173. |
-| `scripts\iniciar_api_express.ps1` | Levanta la API auxiliar en el puerto 3000. |
-
 ---
 
 ## Estructura del proyecto
 
 ```
-ApiGrowApp-main/
+ApiGrowApp/
 ├── app/                          # API principal (FastAPI)
 │   ├── api/                      # Routers (uno por modulo)
 │   │   ├── rutas_auth.py
@@ -191,7 +174,7 @@ ApiGrowApp-main/
 │   │   └── rutas_asistente.py
 │   ├── core/
 │   │   ├── auth.py               # JWT + permisos por rol (moduloxrol)
-│   │   ├── database.py           # Pool psycopg2 (ThreadedConnectionPool)
+│   │   ├── database.py           # Pool de conexiones psycopg2
 │   │   └── asistente.py          # get_schema() / run_sql_query() / lenguaje natural
 │   ├── models/                   # Modelos Pydantic v2
 │   └── repositories/             # SQL puro con psycopg2 (sin ORM)
@@ -206,12 +189,11 @@ ApiGrowApp-main/
 │       │   ├── config/modulos.js
 │       │   └── stores/
 │       └── routes/               # +layout.svelte / +page.svelte
-├── scripts/                      # .ps1 y .bat para Windows
 ├── tests/                        # Pruebas con base de datos simulada
 ├── main.py                       # Punto de entrada de FastAPI
 ├── requirements.txt
-├── schema.sql                    # Esquema PostgreSQL + semillas
-└── odd/tasks/port-windows.md     # Especificacion y tareas del taller
+├── render.yaml                   # Blueprint de despliegue en Render
+└── schema.sql                    # Esquema PostgreSQL + semillas
 ```
 
 ---
@@ -564,7 +546,7 @@ curl.exe https://tu-frontend.onrender.com
 
 | Regla | Donde se cumple |
 |---|---|
-| Windows: sin scripts bash, sin rutas macOS, `python -m ...` | `scripts/`, `requirements.txt`, `app/core/database.py` |
+| Windows: sin scripts bash, sin rutas macOS, `python -m ...` | `requirements.txt`, `app/core/database.py` |
 | Minimo 10 componentes reutilizables | `frontend/src/lib/components/` (16) |
 | Todas las llamadas a la API centralizadas | `frontend/src/lib/services/` |
 | `fetch` prohibido fuera de services | verificacion por grep en `frontend/src/` |

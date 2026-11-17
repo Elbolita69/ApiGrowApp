@@ -1,7 +1,6 @@
 <script>
 	import Badge from '#lib/components/Badge/Badge.svelte';
 
-	/** @type {{usuario: string, rol: string, onmenu: () => void, onlogout: () => void}} */
 	let { usuario, rol, onmenu, onlogout } = $props();
 </script>
 

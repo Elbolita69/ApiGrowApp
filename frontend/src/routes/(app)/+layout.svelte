@@ -9,12 +9,9 @@
 	import Footer from '#lib/components/Footer/Footer.svelte';
 	import LoadingSpinner from '#lib/components/LoadingSpinner/LoadingSpinner.svelte';
 
-	/** @type {{children: import('svelte').Snippet}} */
 	let { children } = $props();
 	let menuAbierto = $state(false);
 
-	// Menu del rol: unicamente los modulos que la BD (tabla moduloxrol) le permite ver.
-	// El asistente es una herramienta general y siempre esta disponible.
 	const items = $derived([
 		...session.modulos
 			.filter((m) => MODULOS[m.nombre])

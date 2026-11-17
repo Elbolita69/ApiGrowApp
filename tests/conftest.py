@@ -1,9 +1,3 @@
-"""Dobles de prueba de la capa de datos.
-
-No hay PostgreSQL en la maquina de pruebas: se sustituye `Database` por un
-doble que captura el SQL ejecutado y devuelve filas preparadas.
-"""
-
 from __future__ import annotations
 
 import sys
@@ -12,15 +6,12 @@ from typing import Any, Optional
 
 import pytest
 
-# Permite ejecutar `pytest tests/` desde cualquier carpeta.
 RAIZ = Path(__file__).resolve().parents[1]
 if str(RAIZ) not in sys.path:
     sys.path.insert(0, str(RAIZ))
 
 
 class FakeCursor:
-    """Cursor de psycopg2 simulado."""
-
     def __init__(self, db: "FakeDatabase") -> None:
         self._db = db
         self._filas: list[Any] = []
@@ -50,8 +41,6 @@ class FakeCursor:
 
 
 class FakeConnection:
-    """Conexion de psycopg2 simulada."""
-
     def __init__(self, db: "FakeDatabase") -> None:
         self._db = db
 
@@ -69,8 +58,6 @@ class FakeConnection:
 
 
 class FakeConexionContext:
-    """Equivale a `with db.get_connection() as conn:`."""
-
     def __init__(self, db: "FakeDatabase") -> None:
         self._db = db
 
@@ -82,8 +69,6 @@ class FakeConexionContext:
 
 
 class FakeDatabase:
-    """Doble de `app.core.database.Database` que registra el SQL ejecutado."""
-
     def __init__(
         self,
         filas: Optional[list] = None,
@@ -93,13 +78,11 @@ class FakeDatabase:
         self.consultas: list[tuple[str, Any]] = []
         self.filas = list(filas or [])
         self.fila = fila
-        # {fragmento de SQL: filas} para responder distinto a cada consulta.
         self.respuestas = dict(respuestas or {})
         self.commits = 0
         self.rollbacks = 0
         self.cierres = 0
 
-    # -- registro ---------------------------------------------------------
     def registrar(self, sql: str, params: Any = None) -> None:
         self.consultas.append((sql, params))
 
@@ -119,7 +102,6 @@ class FakeDatabase:
                 return fila
         return self.fila
 
-    # -- interfaz de Database --------------------------------------------
     def get_connection(self) -> FakeConexionContext:
         return FakeConexionContext(self)
 
@@ -141,14 +123,11 @@ class FakeDatabase:
 
 @pytest.fixture
 def fake_db() -> FakeDatabase:
-    """Doble de base de datos limpio."""
     return FakeDatabase()
 
 
 @pytest.fixture
 def patch_db(monkeypatch):
-    """Parchea `Database` en los modulos indicados y devuelve el doble."""
-
     def _patch(*modulos) -> FakeDatabase:
         fake = FakeDatabase()
         for modulo in modulos:

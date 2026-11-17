@@ -13,7 +13,6 @@
 	let respuesta = $state('');
 	let error = $state('');
 	let cargando = $state(false);
-	/** @type {{ pregunta: string, respuesta: string }[]} */
 	let historial = $state([]);
 
 	const EJEMPLOS = [
@@ -23,14 +22,12 @@
 	];
 
 	onMount(() => {
-		// Carga inicial: se verifica la sesion y se deja el formulario listo.
 		if (!session.token) goto('/login', { replaceState: true });
 		pregunta = '';
 		respuesta = '';
 		historial = [];
 	});
 
-	/** @param {SubmitEvent} e */
 	async function consultar(e) {
 		e.preventDefault();
 		const texto = pregunta.trim();
@@ -42,7 +39,6 @@
 		cargando = true;
 		try {
 			const r = await preguntar(texto);
-			// El backend responde en lenguaje natural: nunca se muestra SQL.
 			respuesta = r?.respuesta ?? '';
 			historial = [{ pregunta: texto, respuesta: respuesta }, ...historial];
 			pregunta = '';
@@ -53,7 +49,6 @@
 		}
 	}
 
-	/** @param {string} texto */
 	function usarEjemplo(texto) {
 		pregunta = texto;
 	}

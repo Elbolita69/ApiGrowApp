@@ -1,4 +1,3 @@
-// Tests de la configuracion de MySQL. Usan el runner nativo de Node: npm test
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { construirConfig } = require('../src/config/opciones');

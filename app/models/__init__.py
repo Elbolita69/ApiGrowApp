@@ -1,5 +1,3 @@
-"""Modelos Pydantic v2 de la aplicacion."""
-
 from app.models.greenhouse import Greenhouse, GreenhouseCreate, GreenhouseUpdate
 from app.models.sensor import Sensor, SensorCreate, SensorUpdate
 from app.models.sensor_reading import (

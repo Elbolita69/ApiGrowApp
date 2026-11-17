@@ -1,16 +1,3 @@
-"""Asistente de consultas a la base de datos.
-
-REGLA ABSOLUTA (S15): el asistente NUNCA muestra SQL al usuario.
-- `get_schema()`: lee la estructura de la base de datos (solo uso interno).
-- `run_sql_query()`: ejecuta ÚNICAMENTE consultas de lectura, validadas por una
-  lista blanca y sobre una conexion de solo lectura.
-- `responder_en_lenguaje_natural()`: responde solo con texto en espanol.
-
-No hay LLM configurado: el clasificador de intencion es determinista y se basa
-en palabras clave en espanol. Cada intencion tiene su consulta parametrizada
-y su plantilla de respuesta.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -24,8 +11,6 @@ logger = logging.getLogger(__name__)
 
 SIN_DATOS = "No pude encontrar esa informacion en la base de datos."
 
-# --------------------------------------------------------------- validacion
-# Palabras que nunca pueden aparecer en una consulta de solo lectura.
 PALABRAS_PROHIBIDAS = frozenset(
     {
         "insert",
@@ -63,7 +48,6 @@ PALABRAS_PROHIBIDAS = frozenset(
     }
 )
 
-# Tablas del sistema: no se consultan desde el asistente.
 PATRONES_SISTEMA = re.compile(
     r"\b(information_schema|pg_catalog|pg_toast|pg_temp|pg_[a-z0-9_]*)\b",
     re.IGNORECASE,
@@ -71,12 +55,10 @@ PATRONES_SISTEMA = re.compile(
 
 
 class SqlNoPermitidoError(ValueError):
-    """La consulta no cumple la lista blanca de solo lectura."""
+    pass
 
 
 def validar_sql(sql: str) -> tuple[bool, str]:
-    """Valida una sentencia: solo consultas de lectura, una sola vez y sin
-    palabras prohibidas ni tablas del sistema."""
     if not sql or not sql.strip():
         return False, "La consulta esta vacia."
 
@@ -97,25 +79,19 @@ def validar_sql(sql: str) -> tuple[bool, str]:
     return True, ""
 
 
-# ------------------------------------------------------------------ esquema
 _db = None
 
 
 def _get_db():
-    """Una sola instancia (y un solo pool) para el asistente."""
     global _db
     if _db is None:
-        from app.core.database import Database  # import local para evitar ciclos
+        from app.core.database import Database
 
         _db = Database()
     return _db
 
 
 def get_schema() -> dict[str, list[dict]]:
-    """Estructura de la base de datos: tabla -> columnas con su tipo.
-
-    Uso interno del asistente: le sirve para entender el modelo de datos.
-    """
     db = _get_db()
     with db.get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -139,11 +115,6 @@ def get_schema() -> dict[str, list[dict]]:
 
 
 def run_sql_query(sql: str, params: Optional[tuple] = None) -> list[dict]:
-    """Ejecuta una consulta de SOLO lectura y devuelve las filas.
-
-    Antes de ejecutar valida la sentencia con `validar_sql()`. La conexion se
-    abre en modo de solo lectura (`SET TRANSACTION READ ONLY`).
-    """
     permitido, mensaje = validar_sql(sql)
     if not permitido:
         logger.warning("Consulta rechazada por el asistente: %s", mensaje)
@@ -152,14 +123,12 @@ def run_sql_query(sql: str, params: Optional[tuple] = None) -> list[dict]:
     db = _get_db()
     with db.get_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Conexion de solo lectura para esta ruta.
             cur.execute("SET TRANSACTION READ ONLY;")
             cur.execute("SET LOCAL default_transaction_read_only = on;")
             cur.execute(sql, params)
             return [dict(fila) for fila in cur.fetchall()]
 
 
-# --------------------------------------------- clasificador de intenciones
 PALABRAS_CONTEO = (
     "cuantos",
     "cuantas",
@@ -184,7 +153,6 @@ ENTIDADES = (
     {"clave": "estudiantes", "etiqueta": "estudiantes", "tabla": "estudiantes"},
 )
 
-# Palabras que identifican cada entidad (gana la que aparece antes en la frase).
 PALABRAS_ENTIDAD = {
     "invernaderos": ("invernadero",),
     "cultivos": ("cultivo",),
@@ -200,23 +168,16 @@ PALABRAS_ENTIDAD = {
 
 
 def _normalizar(texto: str) -> str:
-    """Minusculas y sin acentos (para comparar palabras clave)."""
     texto = (texto or "").lower()
     texto = unicodedata.normalize("NFD", texto)
     return "".join(c for c in texto if unicodedata.category(c) != "Mn")
 
 
 def _detectar_entidad(texto: str) -> Optional[str]:
-    """Entidad que menciona la pregunta.
-
-    Gana la que aparece antes en la frase (asi "sensores del invernadero X" es
-    una consulta de sensores y no de invernaderos).
-    """
     return _mejor_entidad(texto, excepto=None)
 
 
 def _mejor_entidad(texto: str, excepto: Optional[str]) -> Optional[str]:
-    """Entidad mas relevante del texto (la que aparece antes y mas veces)."""
     candidatos = []
     for indice, entidad in enumerate(ENTIDADES):
         if entidad["clave"] == excepto:
@@ -238,12 +199,10 @@ def _mejor_entidad(texto: str, excepto: Optional[str]) -> Optional[str]:
 
 
 def _detectar_otra_entidad(texto: str, excepto: str) -> Optional[str]:
-    """Primera entidad distinta de `excepto` que menciona la pregunta."""
     return _mejor_entidad(texto, excepto=excepto)
 
 
 def _extraer_nombre_invernadero(pregunta: str) -> Optional[str]:
-    """Nombre del invernadero mencionado en la pregunta (entre comillas o al final)."""
     entre_comillas = re.search(r"[\"“']([^\"“”']{2,80})[\"”']", pregunta or "")
     if entre_comillas:
         return entre_comillas.group(1).strip()
@@ -261,7 +220,6 @@ def _extraer_nombre_invernadero(pregunta: str) -> Optional[str]:
     return resto or None
 
 
-# --------------------------------------------------------- consultas por tema
 SQL_CONTEO = {
     "invernaderos": "SELECT COUNT(*) AS total FROM greenhouses WHERE estado = TRUE;",
     "cultivos": "SELECT COUNT(*) AS total FROM crops WHERE estado = TRUE;",
@@ -337,8 +295,6 @@ SQL_SENSORES_INVERNADERO = (
     "WHERE s.estado = TRUE AND g.nombre ILIKE %s ORDER BY s.id ASC LIMIT 20;"
 )
 
-# El usuario puede Referring al invernadero por su nombre o por su numero.
-# Cuando dice "el invernadero 1" se busca por id, no por nombre.
 SQL_CONTEO_SENSORES_INVERNADERO_POR_ID = (
     "SELECT COUNT(*) AS total FROM sensors s "
     "JOIN greenhouses g ON s.greenhouse_id = g.id "
@@ -369,20 +325,16 @@ SQL_ALERTAS_ACTIVAS = (
 
 
 def _plural(singular: str, total: int) -> str:
-    """Convierte una palabra en plural segun la cantidad ('1 sensor', '2 sensores')."""
     if total == 1:
         return singular
-    # Palabras que ya estan en plural o que no cambian: 'estudiantes', 'sensores'.
     if singular.endswith(("s", "z")):
         return singular
-    # Vocales: solo se agrega la 's' ('lectura' -> 'lecturas').
     if singular.endswith(("a", "e", "i", "o", "u")):
         return singular + "s"
     return singular + "es"
 
 
 def _detalle_entidad(clave: str) -> Callable[[dict], str]:
-    """Formato corto en espanol de un registro (sin SQL ni nombres de tabla)."""
     if clave == "lecturas":
         return lambda fila: (
             f"{fila.get('sensor_nombre') or 'sensor'}: {fila.get('valor')} "
@@ -462,11 +414,6 @@ def _responder_listado(
 
 
 def responder_en_lenguaje_natural(pregunta: str, usuario: Optional[dict] = None) -> str:
-    """Responde una pregunta en espanol usando solo datos de la base.
-
-    Devuelve SIEMPRE texto en lenguaje natural: nunca la sentencia SQL ni
-    nombres de tabla crudos.
-    """
     texto = _normalizar(pregunta)
     if not texto.strip():
         return SIN_DATOS
@@ -481,18 +428,16 @@ def responder_en_lenguaje_natural(pregunta: str, usuario: Optional[dict] = None)
 
     try:
         esquema = get_schema()
-    except Exception:  # el esquema es solo contexto: no debe romper la respuesta
+    except Exception:
         logger.warning("No se pudo leer el esquema de la base de datos", exc_info=True)
         esquema = {}
 
-    # "sensores del invernadero X": se filtra por el nombre del invernadero.
     nombre_invernadero = None
     if "invernadero" in texto:
         nombre = _extraer_nombre_invernadero(pregunta)
         if clave == "sensores" and nombre:
             nombre_invernadero = nombre
         elif clave == "invernaderos" and nombre:
-            # El invernadero es el filtro, no el tema de la pregunta.
             otra = _detectar_otra_entidad(texto, "invernaderos")
             if otra:
                 clave = otra
@@ -504,7 +449,6 @@ def responder_en_lenguaje_natural(pregunta: str, usuario: Optional[dict] = None)
             return SIN_DATOS
 
         if nombre_invernadero:
-            # "el invernadero 1" se resuelve por id; por nombre, con coincidencia parcial.
             es_numero = nombre_invernadero.isdigit()
             if es_numero:
                 sql_conteo = SQL_CONTEO_SENSORES_INVERNADERO_POR_ID

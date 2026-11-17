@@ -1,9 +1,3 @@
-"""Repositorio de usuarios (SQL puro con psycopg2, sincrono).
-
-El `password_hash` NUNCA se expone en las respuestas: los metodos publicos
-seleccionan campos explicitos y el hash solo se usa para el login.
-"""
-
 from __future__ import annotations
 
 from typing import Optional
@@ -15,7 +9,6 @@ from app.core.database import Database
 from app.models.user import UserCreate, UserUpdate
 from app.repositories.crud_utils import actualizar_generico, eliminar_logico
 
-# Campos publicos de un usuario (sin contrasena).
 SELECT_USUARIOS = """
     SELECT u.id,
            u.username,
@@ -54,7 +47,6 @@ class UserRepository:
                 return dict(fila) if fila else None
 
     def obtener_por_username(self, username: str) -> Optional[dict]:
-        """Usuario por nombre de usuario (sin contrasena)."""
         with self.db.get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
@@ -65,7 +57,6 @@ class UserRepository:
                 return dict(fila) if fila else None
 
     def obtener_credenciales_por_username(self, username: str) -> Optional[dict]:
-        """Usuario con su hash de contrasena. Uso interno: solo para el login."""
         with self.db.get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
@@ -80,7 +71,6 @@ class UserRepository:
                 return dict(fila) if fila else None
 
     def obtener_por_rol(self, rol_nombre: str) -> Optional[dict]:
-        """Id del rol por su nombre exacto (nombre de negocio)."""
         with self.db.get_connection() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(

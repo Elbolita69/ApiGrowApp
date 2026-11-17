@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS alertas_externas (
     actualizado TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Datos iniciales: 20 sensores externos (principal), 20 lecturas y 20 alertas
 INSERT INTO sensores_externos (tipo, valor_actual, ubicacion) VALUES
 ('temperatura', 17.89, 'Estacion meteorologica - Cajica'),
 ('precipitacion', 2.72, 'Pluviometro - Chia'),

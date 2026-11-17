@@ -1,9 +1,6 @@
 <script>
-	/** @type {{tipo?: string, children: import('svelte').Snippet}} */
 	let { tipo = 'danger', children } = $props();
 
-	// Icono segun el tipo de aviso.
-	/** @type {Record<string, string>} */
 	const ICONOS = {
 		danger: 'bi-exclamation-triangle-fill',
 		warning: 'bi-exclamation-triangle-fill',

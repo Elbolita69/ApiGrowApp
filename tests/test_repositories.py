@@ -1,5 +1,3 @@
-"""Pruebas de la capa de datos con la base de datos simulada."""
-
 from __future__ import annotations
 
 import re
@@ -25,7 +23,6 @@ from app.repositories.user_repo import UserRepository
 
 RAIZ_APP = Path(__file__).resolve().parents[1] / "app"
 
-# (clase del repositorio, tabla en la base de datos)
 REPOSITORIOS = [
     (GreenhouseRepository, "greenhouses"),
     (SensorRepository, "sensors"),
@@ -54,14 +51,12 @@ def _modulo_de(clase):
 
 @pytest.mark.parametrize("clase,tabla", REPOSITORIOS)
 def test_crud_completo(clase, tabla):
-    """Cada repositorio de entidad expone el CRUD completo."""
     for metodo in ("obtener_todos", "obtener_por_id", "crear", "actualizar", "eliminar"):
         assert callable(getattr(clase, metodo, None)), f"{clase.__name__}.{metodo}"
 
 
 @pytest.mark.parametrize("clase,tabla", REPOSITORIOS)
 def test_listado_filtra_por_estado_activo(clase, tabla, patch_db):
-    """El listado solo trae registros con `estado = TRUE`."""
     fake = patch_db(_modulo_de(clase))
     repo = clase()
 
@@ -74,7 +69,6 @@ def test_listado_filtra_por_estado_activo(clase, tabla, patch_db):
 
 @pytest.mark.parametrize("clase,tabla", REPOSITORIOS)
 def test_eliminar_es_borrado_logico(clase, tabla, patch_db):
-    """El borrado es `UPDATE ... SET estado = FALSE` (nunca borra la fila)."""
     fake = patch_db(_modulo_de(clase))
     repo = clase()
 
@@ -102,11 +96,6 @@ def test_listado_devuelve_lista_de_diccionarios(clase, tabla, patch_db):
 
 
 def test_las_relaciones_se_resuelven_por_nombre(patch_db):
-    """Los listados que tienen llave foranea exponen el nombre, no el id.
-
-    El frontend nunca debe mostrar un identificador de base de datos: las
-    relaciones viajan como `greenhouse_nombre`, `sensor_nombre`, etc.
-    """
     from app.repositories.sensor_repo import SensorRepository
 
     fake = patch_db(_modulo_de(SensorRepository))
@@ -122,7 +111,6 @@ def test_las_relaciones_se_resuelven_por_nombre(patch_db):
 
 
 def test_no_existe_borrado_fisico_en_el_codigo():
-    """Ningun archivo de `app/` puede contener un borrado fisico."""
     ofensores = []
     for ruta in sorted(RAIZ_APP.rglob("*.py")):
         contenido = ruta.read_text(encoding="utf-8")
@@ -133,7 +121,6 @@ def test_no_existe_borrado_fisico_en_el_codigo():
 
 
 def test_no_existe_manejo_asincrono_en_el_codigo():
-    """La capa de la aplicacion es sincrona (driver psycopg2)."""
     ofensores = []
     for ruta in sorted(RAIZ_APP.rglob("*.py")):
         contenido = ruta.read_text(encoding="utf-8")
@@ -144,7 +131,6 @@ def test_no_existe_manejo_asincrono_en_el_codigo():
 
 
 def test_el_borrado_logico_actualiza_el_timestamp():
-    """`eliminar_logico` siempre refresca `actualizado`."""
     from app.repositories.crud_utils import eliminar_logico
 
     class _Cursor:

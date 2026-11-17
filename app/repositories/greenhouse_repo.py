@@ -1,5 +1,3 @@
-"""Repositorio de invernaderos (SQL puro con psycopg2, sincrono)."""
-
 from __future__ import annotations
 
 from typing import Optional

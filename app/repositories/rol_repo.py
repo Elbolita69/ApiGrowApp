@@ -1,9 +1,3 @@
-"""Repositorio de roles (SQL puro con psycopg2, sincrono).
-
-El nombre del rol es la clave de negocio: administrador, supervisor, agronomo,
-regador, tecnico, auxiliar_riego, planificador, calidad, mantenimiento, lector.
-"""
-
 from __future__ import annotations
 
 from typing import Optional

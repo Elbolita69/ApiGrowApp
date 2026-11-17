@@ -21,14 +21,10 @@ class CropBase(BaseModel):
 
 
 class CropCreate(CropBase):
-    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class CropUpdate(BaseModel):
-    """Actualizacion parcial: sin `id` ni campos primary key editables."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     nombre: Optional[str] = None
@@ -44,8 +40,6 @@ class CropUpdate(BaseModel):
 
 
 class Crop(CropBase):
-    """Modelo de lectura: incluye la auditoria."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

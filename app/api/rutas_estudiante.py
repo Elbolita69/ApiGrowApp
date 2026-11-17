@@ -44,7 +44,6 @@ def actualizar_estudiante(estudiante_id: int, estudiante: EstudianteUpdate):
     dependencies=[Depends(require_permission("estudiantes", "eliminar"))],
 )
 def eliminar_estudiante(estudiante_id: int):
-    # Borrado logico: el registro pasa a estado = FALSE.
     exito = repo.eliminar(estudiante_id)
     if not exito:
         raise HTTPException(status_code=404, detail="Estudiante no encontrado")

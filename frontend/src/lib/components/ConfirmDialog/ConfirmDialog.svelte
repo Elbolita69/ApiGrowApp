@@ -1,7 +1,6 @@
 <script>
 	import Modal from '#lib/components/Modal/Modal.svelte';
 
-	/** @type {{abierto: boolean, mensaje: string, ocupado?: boolean, onconfirm: () => void, oncancel: () => void}} */
 	let { abierto, mensaje, ocupado = false, onconfirm, oncancel } = $props();
 </script>
 

@@ -16,14 +16,10 @@ class SensorBase(BaseModel):
 
 
 class SensorCreate(SensorBase):
-    """Datos de entrada: sin `id` (lo asigna la base de datos)."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class SensorUpdate(BaseModel):
-    """Actualizacion parcial: sin `id` ni campos primary key editables."""
-
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
     greenhouse_id: Optional[int] = None
@@ -34,8 +30,6 @@ class SensorUpdate(BaseModel):
 
 
 class Sensor(SensorBase):
-    """Modelo de lectura: incluye la auditoria."""
-
     model_config = ConfigDict(from_attributes=True)
 
     id: int

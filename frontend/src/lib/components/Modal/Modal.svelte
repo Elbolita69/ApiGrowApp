@@ -1,11 +1,6 @@
 <script>
-	/**
-	 * Ventana modal reutilizable.
-	 * @type {{titulo: string, abierto: boolean, onclose: () => void, tamano?: string, children: import('svelte').Snippet, pie?: import('svelte').Snippet}}
-	 */
 	let { titulo, abierto, onclose, tamano = 'lg', children, pie } = $props();
 
-	/** @param {KeyboardEvent} e */
 	function teclado(e) {
 		if (abierto && e.key === 'Escape') onclose();
 	}
